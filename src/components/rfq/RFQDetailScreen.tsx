@@ -353,59 +353,6 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
                 workbookProfile={workbookProfile}
                 workbookReview={workbookReview}
               />
-
-              {/* Briefing Recommendation + Workbook Posture */}
-              <div className="grid gap-5 xl:grid-cols-2">
-                <div className="surface-panel p-6">
-                  <div className="section-kicker">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Briefing Recommendation
-                  </div>
-                  <div className="mt-4 text-base font-semibold text-foreground">
-                    {briefing?.recommendation ??
-                      "Recommendation forming as intelligence matures."}
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {(briefing?.openQuestions ?? snapshot?.blockers ?? []).map(
-                      (item) => (
-                        <div key={item} className="stat-cell text-sm text-muted-foreground">
-                          {item}
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div className="surface-panel p-6">
-                  <div className="section-kicker">Workbook Posture</div>
-                  <div className="mt-4 text-base font-semibold text-foreground">
-                    {workbookReview
-                      ? `${workbookReview.readiness}% review readiness`
-                      : "Workbook review loading"}
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {(workbookReview?.flags ?? []).length > 0 ? (
-                      workbookReview?.flags.map((flag) => (
-                        <div
-                          key={`${flag.label}-${flag.detail}`}
-                          className="stat-cell"
-                        >
-                          <div className="text-sm font-medium text-foreground">
-                            {flag.label}
-                          </div>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            {flag.detail}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
-                        No workbook review blockers are currently open.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
           ) : null}
 
