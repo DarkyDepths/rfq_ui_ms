@@ -46,7 +46,7 @@ export function UploadZone({
     status === "ready" ? (
       <Badge variant="emerald">Ready</Badge>
     ) : status === "processing" ? (
-      <Badge variant="steel">Processing</Badge>
+      <Badge variant="steel" className="animate-pulse">Processing</Badge>
     ) : status === "failed" ? (
       <Badge variant="rose">Failed</Badge>
     ) : (
@@ -57,11 +57,10 @@ export function UploadZone({
     <motion.div
       animate={{
         scale: dragActive ? 1.01 : 1,
-        borderColor: dragActive ? "rgba(74, 144, 217, 0.38)" : "rgba(255,255,255,0.08)",
       }}
       className={cn(
-        "surface-panel surface-panel-hover border-dashed p-5",
-        dragActive && "shadow-steel",
+        "surface-panel surface-panel-hover border-dashed p-6 transition-colors duration-200",
+        dragActive && "border-primary bg-primary/5",
       )}
       onDragEnter={() => setDragActive(true)}
       onDragLeave={() => setDragActive(false)}
@@ -75,35 +74,35 @@ export function UploadZone({
         triggerUpload();
       }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="flex gap-4">
           <div
             className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-2xl border",
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors",
               dragActive
-                ? "animate-pulseRing border-steel-400/30 bg-steel-500/15"
-                : "border-white/10 bg-white/[0.03]",
+                ? "border-primary/30 bg-primary/10"
+                : "border-border bg-card dark:bg-white/[0.03]",
             )}
           >
             {status === "processing" ? (
-              <LoaderCircle className="h-5 w-5 animate-spin text-steel-300" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-primary" />
             ) : status === "failed" ? (
-              <XCircle className="h-5 w-5 text-rose-300" />
+              <XCircle className="h-5 w-5 text-rose-500" />
             ) : status === "ready" ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
             ) : (
-              <UploadCloud className="h-5 w-5 text-gold-300" />
+              <UploadCloud className="h-5 w-5 text-gold-500 dark:text-gold-300" />
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">{title}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground">{title}</h3>
               {statusBadge}
             </div>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
               {description}
             </p>
-            <div className="mt-3 text-xs text-muted">
+            <div className="mt-3 inline-block rounded-md bg-muted/50 px-2.5 py-1 font-mono text-xs text-muted-foreground dark:bg-white/[0.03]">
               {currentFileName
                 ? `${currentFileName}${uploadedLabel ? ` • ${uploadedLabel}` : ""}`
                 : "Drag a file here or trigger a demo upload transition."}
@@ -111,7 +110,7 @@ export function UploadZone({
           </div>
         </div>
 
-        <Button onClick={triggerUpload} variant="secondary">
+        <Button onClick={triggerUpload} variant="outline" className="w-full shrink-0 md:w-auto">
           {status === "ready" ? "Refresh Demo Upload" : "Simulate Upload"}
         </Button>
       </div>

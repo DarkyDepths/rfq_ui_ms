@@ -58,16 +58,16 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
 
   return (
     <div className="surface-panel overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/8 px-6 py-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border bg-muted/20 px-5 py-4 dark:bg-white/[0.01]">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             RFQ Queue
           </div>
-          <div className="mt-1 text-lg font-semibold text-foreground">
+          <div className="mt-1 text-base font-medium text-foreground">
             Operational and intelligence-aligned records
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <CalendarDays className="h-4 w-4" />
           Sorted by {sortField.replace("_", " ")}
         </div>
@@ -76,22 +76,22 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>RFQ</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">RFQ Detail</TableHead>
             <TableHead>
-              <Button onClick={() => toggleSort("client")} size="sm" variant="ghost">
+              <Button onClick={() => toggleSort("client")} size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Client
-                <ArrowUpDown className="h-4 w-4" />
+                <ArrowUpDown className="h-3 w-3 ml-1" />
               </Button>
             </TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Stage</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status & Intel</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stage</TableHead>
             <TableHead>
-              <Button onClick={() => toggleSort("due")} size="sm" variant="ghost">
+              <Button onClick={() => toggleSort("due")} size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Due Date
-                <ArrowUpDown className="h-4 w-4" />
+                <ArrowUpDown className="h-3 w-3 ml-1" />
               </Button>
             </TableHead>
-            <TableHead className="text-right">Open</TableHead>
+            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,33 +100,36 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
               key={item.id}
               animate={{ opacity: 1, y: 0 }}
               initial={{ opacity: 0, y: 14 }}
-              transition={{ duration: 0.35, delay: 0.32 + index * 0.05 }}
-              className="border-b border-white/6 transition-colors hover:bg-white/[0.03]"
+              transition={{ duration: 0.35, delay: 0.1 + index * 0.03 }}
+              className="border-b border-border transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.03]"
             >
-              <TableCell>
+              <TableCell className="py-4">
                 <div>
-                  <div className="font-medium text-foreground">{item.title}</div>
-                  <div className="mt-1 text-xs uppercase tracking-[0.16em] text-muted">
+                  <div className="font-semibold text-foreground">{item.title}</div>
+                  <div className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
                     {item.id} • {item.valueLabel}
                   </div>
                 </div>
               </TableCell>
-              <TableCell>{item.client}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
+              <TableCell className="py-4 font-medium">{item.client}</TableCell>
+              <TableCell className="py-4">
+                <div className="flex flex-col gap-1.5 items-start">
                   <RFQStatusChip status={item.status} />
+                  <div className="text-[0.68rem] font-medium text-muted-foreground">
+                    Intel: {item.intelligenceState}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="text-sm text-foreground">{item.stageLabel}</div>
-                <div className="text-xs text-muted">{item.nextAction}</div>
+              <TableCell className="py-4">
+                <div className="text-sm font-medium text-foreground">{item.stageLabel}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{item.nextAction}</div>
               </TableCell>
-              <TableCell>{item.dueLabel}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="py-4 font-mono text-sm">{item.dueLabel}</TableCell>
+              <TableCell className="py-4 text-right">
                 <Button asChild size="sm" variant="secondary">
                   <Link href={`/rfqs/${item.id}`}>
-                    Detail
-                    <ChevronRight className="h-4 w-4" />
+                    Open
+                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
                   </Link>
                 </Button>
               </TableCell>

@@ -1,8 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
-
-import { Progress } from "@/components/ui/progress";
+import { CircularGauge } from "@/components/common/CircularGauge";
 
 export function IntelligenceReadinessBar({
   readiness,
@@ -12,32 +10,18 @@ export function IntelligenceReadinessBar({
   confidence: number;
 }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-            Readiness
-          </div>
-          <div className="mt-2 text-display text-3xl font-semibold text-foreground">
-            {readiness}%
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-            Confidence
-          </div>
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            initial={{ opacity: 0.4, y: 10 }}
-            className="mt-2 text-display text-3xl font-semibold text-steel-300"
-          >
-            {confidence}%
-          </motion.div>
-        </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <Progress value={readiness} />
-        <Progress className="opacity-65" value={confidence} />
+    <div className="surface-panel p-6">
+      <h3 className="text-sm font-semibold text-foreground">
+        Readiness & Confidence
+      </h3>
+      <div className="mt-5 flex items-center justify-center gap-8">
+        <CircularGauge label="Readiness" size={100} value={readiness} />
+        <CircularGauge
+          color="hsl(213, 60%, 52%)"
+          label="Confidence"
+          size={100}
+          value={confidence}
+        />
       </div>
     </div>
   );

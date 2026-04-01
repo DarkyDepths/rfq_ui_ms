@@ -14,7 +14,7 @@ const config: Config = {
       center: true,
       padding: "1.5rem",
       screens: {
-        "2xl": "1440px",
+        "2xl": "1400px",
       },
     },
     extend: {
@@ -54,18 +54,20 @@ const config: Config = {
         },
         steel: {
           100: "#C2D7F1",
+          200: "#A0C1E8",
           300: "#78AEDA",
+          400: "#5E9DD3",
           500: "#4A90D9",
           600: "#3976B4",
           700: "#274C74",
         },
-        cyan: {
-          400: "#4AB7C7",
-          500: "#3FA7B8",
-        },
         gold: {
+          100: "#F5E6B8",
+          200: "#ECD88F",
           300: "#E0B84A",
+          400: "#D4A83A",
           500: "#C89B2A",
+          600: "#A67F22",
           700: "#8B6A1E",
         },
       },
@@ -75,15 +77,9 @@ const config: Config = {
         mono: ["var(--font-mono)", ...defaultTheme.fontFamily.mono],
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(255,255,255,0.08), 0 20px 60px rgba(0, 0, 0, 0.35)",
-        steel: "0 18px 40px rgba(31, 61, 92, 0.24)",
-        gold: "0 20px 48px rgba(200, 155, 42, 0.16)",
-      },
-      backgroundImage: {
-        "grid-faint":
-          "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)",
-        "noise-faint":
-          "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 0, transparent 34%), radial-gradient(circle at 80% 0%, rgba(74,144,217,0.14) 0, transparent 30%), radial-gradient(circle at 80% 80%, rgba(200,155,42,0.12) 0, transparent 26%)",
+        glow: "0 0 0 1px rgba(255,255,255,0.06), 0 16px 48px rgba(0, 0, 0, 0.25)",
+        steel: "0 12px 32px rgba(31, 61, 92, 0.18)",
+        gold: "0 12px 32px rgba(200, 155, 42, 0.12)",
       },
       keyframes: {
         shimmer: {
@@ -91,18 +87,23 @@ const config: Config = {
           "100%": { transform: "translateX(100%)" },
         },
         pulseRing: {
-          "0%, 100%": { opacity: "0.28", transform: "scale(1)" },
-          "50%": { opacity: "0.5", transform: "scale(1.02)" },
+          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
+          "50%": { opacity: "0.6", transform: "scale(1.02)" },
         },
         lift: {
-          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
       },
       animation: {
         shimmer: "shimmer 1.8s linear infinite",
-        pulseRing: "pulseRing 1.8s ease-in-out infinite",
-        lift: "lift 420ms ease-out",
+        pulseRing: "pulseRing 2s ease-in-out infinite",
+        lift: "lift 400ms ease-out",
+        fadeIn: "fadeIn 300ms ease-out",
       },
     },
   },

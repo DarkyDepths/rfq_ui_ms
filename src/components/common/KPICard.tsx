@@ -8,10 +8,10 @@ import type { KPIMetricModel } from "@/models/ui/dashboard";
 import { cn } from "@/lib/utils";
 
 const toneStyles: Record<KPIMetricModel["tone"], string> = {
-  steel: "from-steel-500/18 to-transparent text-steel-300",
-  gold: "from-gold-500/18 to-transparent text-gold-300",
-  emerald: "from-emerald-500/18 to-transparent text-emerald-300",
-  amber: "from-amber-500/18 to-transparent text-amber-300",
+  steel: "from-steel-500/15 to-transparent text-steel-500 dark:text-steel-300",
+  gold: "from-gold-500/15 to-transparent text-gold-600 dark:text-gold-300",
+  emerald: "from-emerald-500/15 to-transparent text-emerald-600 dark:text-emerald-300",
+  amber: "from-amber-500/15 to-transparent text-amber-600 dark:text-amber-300",
 };
 
 function TrendIcon({
@@ -47,19 +47,19 @@ export function KPICard({
         <CardContent className="relative overflow-hidden p-5">
           <div
             className={cn(
-              "absolute inset-x-0 top-0 h-24 bg-gradient-to-b",
+              "absolute inset-x-0 top-0 h-20 bg-gradient-to-b opacity-50 dark:opacity-100",
               toneStyles[metric.tone],
             )}
           />
           <div className="relative">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               {metric.label}
             </div>
-            <div className="mt-4 text-display text-4xl font-semibold tracking-[-0.04em]">
+            <div className="mt-3 font-mono text-3xl font-semibold tracking-tight text-foreground">
               {metric.value}
             </div>
-            <p className="mt-2 text-sm text-muted">{metric.helper}</p>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-foreground">
+            <p className="mt-1.5 text-[0.8rem] text-muted-foreground">{metric.helper}</p>
+            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-foreground dark:bg-white/[0.03]">
               <TrendIcon direction={metric.trendDirection} />
               {metric.trendLabel}
             </div>

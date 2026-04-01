@@ -1,56 +1,54 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Shield, Wrench } from "lucide-react";
 
 import { useRole } from "@/context/role-context";
 import type { AppRole } from "@/models/ui/role";
+import { cn } from "@/lib/utils";
 
 const roles: Array<{
   value: AppRole;
   label: string;
-  description: string;
+  icon: typeof Shield;
 }> = [
-  {
-    value: "manager",
-    label: "Manager",
-    description: "Portfolio control",
-  },
-  {
-    value: "worker",
-    label: "Worker",
-    description: "Execution focus",
-  },
+  { value: "manager", label: "Manager", icon: Shield },
+  { value: "worker", label: "Worker", icon: Wrench },
 ];
 
 export function RoleSwitcher() {
   const { role, setRole } = useRole();
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-      <div className="grid grid-cols-2 gap-1">
-        {roles.map((option) => (
+    <div className="flex rounded-xl border border-border bg-muted/50 p-0.5 dark:bg-white/[0.03]">
+      {roles.map((option) => {
+        const isActive = role === option.value;
+        const Icon = option.icon;
+
+        return (
           <button
             key={option.value}
-            className="relative min-w-[118px] rounded-xl px-3 py-2 text-left"
+            className={cn(
+              "relative flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors",
+              !isActive && "text-muted-foreground hover:text-foreground",
+            )}
             onClick={() => setRole(option.value)}
             type="button"
           >
-            {role === option.value ? (
+            {isActive ? (
               <motion.div
-                className="absolute inset-0 rounded-xl border border-steel-500/35 bg-steel-500/16"
-                layoutId="role-switch-surface"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="absolute inset-0 rounded-[10px] bg-card shadow-sm dark:bg-white/[0.08]"
+                layoutId="role-switch-pill"
+                transition={{ type: "spring", stiffness: 300, damping: 28 }}
               />
             ) : null}
-            <div className="relative">
-              <div className="text-sm font-semibold text-foreground">
-                {option.label}
-              </div>
-              <div className="text-[0.72rem] text-muted">{option.description}</div>
+            <div className="relative flex items-center gap-1.5">
+              <Icon className="h-3.5 w-3.5" />
+              <span>{option.label}</span>
             </div>
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }

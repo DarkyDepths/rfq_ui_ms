@@ -2,209 +2,225 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Layers3, Radar, ShieldCheck } from "lucide-react";
+import { ArrowRight, PlusSquare, Radar } from "lucide-react";
 
 import { KPICard } from "@/components/common/KPICard";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
-import { PlatformWordmark } from "@/components/branding/PlatformWordmark";
 import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useOverviewData } from "@/hooks/use-overview-data";
 
 export function RFQOverviewScreen() {
   const { role } = useRole();
   const { loading, metrics, portfolio, rfqs } = useOverviewData();
+  const permissions = getPermissions(role);
 
-  const featured = rfqs[0];
-  const secondary = rfqs.slice(1, 3);
+  const displayRfqs = permissions.canViewAllRfqs ? rfqs : rfqs.slice(0, 3);
+  const featuredCards = displayRfqs.slice(0, 3);
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="surface-panel p-6 lg:p-8">
-          <PlatformWordmark />
-          <h1 className="mt-6 max-w-3xl text-display text-4xl font-semibold tracking-[-0.05em] text-foreground sm:text-5xl">
-            Operate RFQ lifecycle execution and intelligence artifacts from one industrial command surface.
+    <div className="space-y-8">
+      {/* ─── Page Header ─── */}
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-display text-3xl font-semibold text-foreground lg:text-4xl">
+            {permissions.overviewTitle}
           </h1>
-          <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted">
-            Manager-owned operational state and intelligence-owned analytical artifacts stay visible together, without collapsing platform responsibility into the UI.
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {permissions.overviewSubtitle}
           </p>
-
-          <div className="mt-6 flex flex-wrap gap-3">
+        </div>
+        <div className="flex gap-2">
+          {permissions.primaryCta ? (
             <Button asChild size="lg" variant="default">
-              <Link href={role === "manager" ? "/rfqs/new" : "/rfqs/RFQ-2026-0142"}>
-                {role === "manager" ? "Create RFQ Draft" : "Open Execution RFQ"}
-                <ArrowRight className="h-4 w-4" />
+              <Link href={permissions.primaryCta.href}>
+                <PlusSquare className="h-4 w-4" />
+                {permissions.primaryCta.label}
               </Link>
             </Button>
-            <Button asChild size="lg" variant="secondary">
+          ) : null}
+          <Button asChild size="lg" variant="secondary">
+            <Link href="/rfqs/RFQ-2026-0142">
+              <Radar className="h-4 w-4" />
+              Featured RFQ
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* ─── KPI Strip ─── */}
+      <section>
+        {loading ? (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={`kpi-sk-${i}`} className="h-[160px]" lines={4} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric, index) => (
+              <KPICard key={metric.id} index={index} metric={metric} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ─── Two-Column: RFQ Cards + Intelligence Posture ─── */}
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        {/* Left: Active RFQs */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              {permissions.canViewAllRfqs ? "Active RFQs" : "Assigned RFQs"}
+            </h2>
+            <Button asChild size="sm" variant="ghost">
               <Link href="/rfqs">
-                RFQ Queue
-                <Layers3 className="h-4 w-4" />
+                View all
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
+          {loading ? (
+            <div className="space-y-4">
+              <SkeletonCard className="h-[220px]" lines={5} />
+              <SkeletonCard className="h-[220px]" lines={5} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {featuredCards.map((rfq, index) => (
+                <RFQCard key={rfq.id} index={index} rfq={rfq} />
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* Right: Intelligence Posture */}
         <AnimatePresence mode="wait">
           <motion.div
             key={role}
             animate={{ opacity: 1, y: 0 }}
-            className="surface-panel p-6"
-            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+            exit={{ opacity: 0, y: -8 }}
             initial={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.24 }}
+            transition={{ duration: 0.2 }}
           >
-            <div className="section-kicker">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {role === "manager" ? "Manager View" : "Worker View"}
-            </div>
-            <h2 className="mt-5 text-display text-2xl font-semibold text-foreground">
-              {role === "manager"
-                ? "Portfolio decisions stay close to the signal."
-                : "Execution actions stay close to the RFQ."}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              {role === "manager"
-                ? "You can stage new RFQs, review readiness, and trigger artifact refreshes from the platform shell."
-                : "You can focus on uploads, workbook follow-up, and the next operational action without seeing the entire portfolio control surface."}
-            </p>
-            <div className="mt-5 grid gap-3">
-              <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted">
-                  Immediate focus
+            {permissions.canViewPortfolio ? (
+              <div className="surface-panel p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="section-kicker">
+                      <Radar className="h-3.5 w-3.5" />
+                      Intelligence Posture
+                    </div>
+                    <h2 className="mt-3 text-lg font-semibold text-foreground">
+                      Portfolio Readiness
+                    </h2>
+                  </div>
+                  {portfolio ? (
+                    <Badge variant="steel">{portfolio.readinessAverage}% avg</Badge>
+                  ) : null}
                 </div>
-                <div className="mt-2 text-lg font-semibold text-foreground">
-                  {role === "manager"
-                    ? "Prioritize RFQ-2026-0142 for committee review."
-                    : "Upload the missing workbook for RFQ-2026-0138."}
+
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {portfolio?.narrative ??
+                    "Intelligence portfolio summary loading..."}
+                </p>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="stat-cell">
+                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+                      Complete
+                    </div>
+                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
+                      {portfolio?.completeCount ?? "—"}
+                    </div>
+                  </div>
+                  <div className="stat-cell">
+                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-gold-300">
+                      Partial
+                    </div>
+                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
+                      {portfolio?.partialCount ?? "—"}
+                    </div>
+                  </div>
+                  <div className="stat-cell">
+                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-400">
+                      Failed
+                    </div>
+                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
+                      {portfolio?.failedCount ?? "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <Button asChild variant="secondary">
+                    <Link href="/rfqs/RFQ-2026-0142">
+                      Open featured intelligence demo
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted">
-                  Portfolio signal
-                </div>
-                <div className="mt-2 text-lg font-semibold text-foreground">
-                  {portfolio
-                    ? `${portfolio.completeCount} complete • ${portfolio.partialCount} partial • ${portfolio.failedCount} failed`
-                    : "Signal board initializing"}
+            ) : (
+              /* Worker view: action-focused card */
+              <div className="surface-panel p-6">
+                <div className="section-kicker">Next Actions</div>
+                <h2 className="mt-3 text-lg font-semibold text-foreground">
+                  Pending work items
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Focus on uploads and workbook follow-up for your assigned RFQs.
+                </p>
+                <div className="mt-4 space-y-2">
+                  <div className="stat-cell">
+                    <div className="text-sm font-medium text-foreground">
+                      Upload missing workbook for RFQ-2026-0138
+                    </div>
+                  </div>
+                  <div className="stat-cell">
+                    <div className="text-sm font-medium text-foreground">
+                      Review parsed package for RFQ-2026-0142
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* Role info card */}
+            <div className="surface-panel p-5">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Badge variant={role === "manager" ? "steel" : "gold"}>
+                  {role === "manager" ? "Manager View" : "Worker View"}
+                </Badge>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {role === "manager"
+                  ? "You see the full portfolio, intelligence posture, and can create or advance RFQs."
+                  : "You see assigned RFQs with pending actions. Portfolio controls are manager-owned."}
+              </p>
             </div>
           </motion.div>
         </AnimatePresence>
       </section>
 
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <SkeletonCard key={`metric-skeleton-${index}`} className="h-[176px]" lines={4} />
-          ))}
+      {/* ─── Full-Width Table ─── */}
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">
+            {permissions.canViewAllRfqs ? "All RFQs" : "Assigned Queue"}
+          </h2>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((metric, index) => (
-            <KPICard key={metric.id} index={index} metric={metric} />
-          ))}
-        </div>
-      )}
-
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-4">
-          {loading ? (
-            <>
-              <SkeletonCard className="h-[320px]" lines={6} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                <SkeletonCard className="h-[280px]" lines={5} />
-                <SkeletonCard className="h-[280px]" lines={5} />
-              </div>
-            </>
-          ) : (
-            <>
-              {featured ? <RFQCard rfq={featured} /> : null}
-              <div className="grid gap-4 lg:grid-cols-2">
-                {secondary.map((rfq, index) => (
-                  <RFQCard key={rfq.id} index={index + 1} rfq={rfq} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="surface-panel p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="section-kicker">
-                <Radar className="h-3.5 w-3.5" />
-                Intelligence posture
-              </div>
-              <h2 className="mt-4 text-display text-2xl font-semibold text-foreground">
-                Portfolio readiness board
-              </h2>
-            </div>
-            {portfolio ? <Badge variant="steel">{portfolio.readinessAverage}% avg</Badge> : null}
-          </div>
-
-          <p className="mt-4 text-sm leading-relaxed text-muted">
-            {portfolio?.narrative ??
-              "Manager and intelligence portfolio summary is loading."}
-          </p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-emerald-300">
-                Complete
-              </div>
-              <div className="mt-2 text-3xl font-semibold text-foreground">
-                {portfolio?.completeCount ?? "--"}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-gold-500/20 bg-gold-500/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-gold-300">
-                Partial
-              </div>
-              <div className="mt-2 text-3xl font-semibold text-foreground">
-                {portfolio?.partialCount ?? "--"}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4">
-              <div className="text-xs uppercase tracking-[0.18em] text-rose-300">
-                Failed
-              </div>
-              <div className="mt-2 text-3xl font-semibold text-foreground">
-                {portfolio?.failedCount ?? "--"}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-3xl border border-white/8 bg-white/[0.03] p-5">
-            <div className="text-xs uppercase tracking-[0.18em] text-muted">
-              Most impressive demo path
-            </div>
-            <h3 className="mt-2 text-xl font-semibold text-foreground">
-              RFQ-2026-0142 — complete operational and intelligence alignment
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Open the detail route to show package understanding, briefing, workbook profile, workbook review, and artifacts transitioning into the complete state.
-            </p>
-            <Button asChild className="mt-5" variant="outline">
-              <Link href="/rfqs/RFQ-2026-0142">
-                Open featured intelligence demo
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+        {loading ? (
+          <SkeletonCard className="h-[300px]" lines={7} />
+        ) : (
+          <RFQTable items={displayRfqs} />
+        )}
       </section>
-
-      {loading ? (
-        <SkeletonCard className="h-[320px]" lines={7} />
-      ) : (
-        <RFQTable items={rfqs} />
-      )}
     </div>
   );
 }

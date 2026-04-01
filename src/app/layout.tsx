@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono, Syne } from "next/font/google";
+import { IBM_Plex_Sans, JetBrains_Mono, Syne } from "next/font/google";
 
 import "./globals.css";
 
 import { appConfig } from "@/config/app";
 import { AppShellProvider } from "@/context/app-shell-context";
+import { ConnectionProvider } from "@/context/connection-context";
 import { RoleProvider } from "@/context/role-context";
+import { ThemeProvider } from "@/context/theme-context";
 
 const displayFont = Syne({
   subsets: ["latin"],
@@ -13,10 +15,10 @@ const displayFont = Syne({
   weight: ["500", "700"],
 });
 
-const bodyFont = DM_Sans({
+const bodyFont = IBM_Plex_Sans({
   subsets: ["latin"],
   variable: "--font-body",
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const monoFont = JetBrains_Mono({
@@ -39,13 +41,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
         className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} min-h-screen bg-background text-foreground`}
       >
-        <RoleProvider>
-          <AppShellProvider>{children}</AppShellProvider>
-        </RoleProvider>
+        <ThemeProvider>
+          <RoleProvider>
+            <ConnectionProvider>
+              <AppShellProvider>{children}</AppShellProvider>
+            </ConnectionProvider>
+          </RoleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

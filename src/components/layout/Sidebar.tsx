@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Files,
   FolderKanban,
@@ -10,9 +11,7 @@ import {
   Radar,
 } from "lucide-react";
 
-import { PlatformWordmark } from "@/components/branding/PlatformWordmark";
-import { GHILogo } from "@/components/branding/GHILogo";
-import { Badge } from "@/components/ui/badge";
+import { ConnectionIndicator } from "@/components/layout/ConnectionIndicator";
 import { primaryNavigation, type NavigationIcon } from "@/config/navigation";
 import { useAppShell } from "@/context/app-shell-context";
 import { useRole } from "@/context/role-context";
@@ -38,18 +37,46 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "border-b border-white/8 bg-[#0E1217]/90 backdrop-blur-xl lg:min-h-screen lg:border-b-0 lg:border-r",
-        sidebarCollapsed ? "lg:w-24" : "lg:w-80",
+        "border-b border-border bg-card lg:flex lg:min-h-screen lg:flex-col lg:border-b-0 lg:border-r",
+        sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[264px]",
       )}
     >
-      <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4 lg:flex-col lg:items-stretch lg:px-5 lg:pt-5">
-        <GHILogo compact={sidebarCollapsed} />
-        <div className="hidden lg:block">
-          {!sidebarCollapsed ? <PlatformWordmark /> : null}
+      {/* ─── Brand Zone ─── */}
+      <div
+        className={cn(
+          "flex items-center gap-3 border-b border-border px-4 py-4 lg:border-b lg:px-5 lg:py-5",
+          sidebarCollapsed && "lg:justify-center lg:px-3",
+        )}
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 ring-1 ring-gold-500/20 dark:from-[#2A2218] dark:to-[#1E1A14] dark:ring-gold-500/30">
+          <Image
+            alt="Al Bassam Group"
+            className="object-contain p-0.5"
+            height={32}
+            priority
+            src="/brand/albassam-logo.png"
+            width={32}
+          />
         </div>
+        {!sidebarCollapsed ? (
+          <div className="min-w-0">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-gold-600 dark:text-gold-300">
+              Al Bassam Group
+            </div>
+            <div className="truncate text-sm font-medium text-foreground">
+              RFQ Intelligence
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <nav className="hide-scrollbar flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:px-5">
+      {/* ─── Navigation ─── */}
+      <nav
+        className={cn(
+          "hide-scrollbar flex gap-1.5 overflow-x-auto px-3 py-3 lg:flex-1 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:py-4",
+          sidebarCollapsed && "lg:items-center",
+        )}
+      >
         {navItems.map((item) => {
           const isActive =
             item.match === "exact"
@@ -61,51 +88,39 @@ export function Sidebar() {
             <Link
               key={item.href}
               className={cn(
-                "group relative flex min-w-[220px] items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200 lg:min-w-0",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                sidebarCollapsed && "lg:justify-center lg:px-0",
                 isActive
-                  ? "border-steel-500/35 bg-steel-500/14 text-white shadow-steel"
-                  : "border-white/6 bg-white/[0.02] text-muted hover:border-white/12 hover:bg-white/[0.04] hover:text-foreground",
+                  ? "bg-primary/10 text-primary dark:bg-primary/12"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:hover:bg-white/[0.04]",
               )}
               href={item.href}
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl border",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                   isActive
-                    ? "border-steel-400/25 bg-steel-500/16 text-steel-200"
-                    : "border-white/8 bg-white/[0.04]",
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground group-hover:text-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />
               </div>
               {!sidebarCollapsed ? (
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground">{item.title}</span>
-                    {item.highlight ? <Badge variant="gold">Demo</Badge> : null}
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">
-                    {item.description}
-                  </p>
-                </div>
+                <span className="truncate">{item.title}</span>
+              ) : null}
+              {isActive ? (
+                <div className="absolute left-0 top-1/2 hidden h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary lg:block" />
               ) : null}
             </Link>
           );
         })}
       </nav>
 
-      {!sidebarCollapsed ? (
-        <div className="hidden px-5 pb-5 pt-2 lg:block">
-          <div className="rounded-2xl border border-gold-500/18 bg-gold-500/8 p-4">
-            <div className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-gold-300">
-              Defense-ready shell
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Operational data is modeled as manager-owned. Analytical artifacts are modeled as intelligence-owned.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      {/* ─── Connection Status ─── */}
+      <div className="hidden border-t border-border p-3 lg:block">
+        <ConnectionIndicator compact={sidebarCollapsed} />
+      </div>
     </aside>
   );
 }
