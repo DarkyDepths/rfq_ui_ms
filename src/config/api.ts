@@ -1,0 +1,12 @@
+const useMockData =
+  process.env.NEXT_PUBLIC_USE_MOCK_DATA === undefined ||
+  process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+
+export const apiConfig = {
+  useMockData,
+  demoLatencyMs: Number(process.env.NEXT_PUBLIC_DEMO_LATENCY_MS ?? 650),
+  managerBaseUrl:
+    process.env.NEXT_PUBLIC_MANAGER_API_URL ?? "http://localhost:8000",
+  intelligenceBaseUrl:
+    process.env.NEXT_PUBLIC_INTELLIGENCE_API_URL ?? "http://localhost:8001",
+} as const;

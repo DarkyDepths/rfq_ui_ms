@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 18% 6%;
+    --foreground: 220 23% 95%;
+    --card: 222 20% 11%;
+    --card-foreground: 220 23% 95%;
+    --popover: 222 20% 11%;
+    --popover-foreground: 220 23% 95%;
+    --primary: 210 64% 57%;
+    --primary-foreground: 220 23% 97%;
+    --secondary: 32 65% 47%;
+    --secondary-foreground: 220 23% 97%;
+    --muted: 221 16% 15%;
+    --muted-foreground: 218 14% 72%;
+    --accent: 189 49% 48%;
+    --accent-foreground: 220 23% 97%;
+    --destructive: 0 62% 61%;
+    --destructive-foreground: 220 23% 97%;
+    --border: 220 14% 22%;
+    --input: 220 14% 18%;
+    --ring: 210 64% 57%;
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at 15% 18%, rgba(74, 144, 217, 0.15), transparent 24%),
+      radial-gradient(circle at 84% 6%, rgba(200, 155, 42, 0.18), transparent 20%),
+      linear-gradient(180deg, rgba(9, 11, 14, 1) 0%, rgba(13, 15, 18, 1) 55%, rgba(14, 17, 22, 1) 100%);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0),
+      linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 22px 22px, 120px 120px, 120px 120px;
+    mix-blend-mode: soft-light;
+  }
+
+  ::selection {
+    background: rgba(74, 144, 217, 0.3);
+    color: #f3f4f6;
+  }
+}
+
+@layer components {
+  .surface-panel {
+    @apply relative overflow-hidden rounded-3xl border border-white/10 bg-card/95 shadow-glow backdrop-blur-xl;
+  }
+
+  .surface-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 24%),
+      radial-gradient(circle at top right, rgba(74, 144, 217, 0.08), transparent 28%);
+  }
+
+  .surface-panel-hover {
+    @apply transition-all duration-300 hover:border-white/15 hover:bg-[#1B1F29]/95 hover:shadow-steel;
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-gold-500/25 bg-gold-500/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-gold-300;
+  }
+
+  .demo-banner {
+    @apply inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-400;
+  }
+
+  .text-display {
+    @apply font-display tracking-[-0.03em];
+  }
+
+  .grid-underlay {
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 96px 96px;
+  }
+
+  .noise-underlay {
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.04), transparent 26%),
+      radial-gradient(circle at 85% 15%, rgba(74,144,217,0.08), transparent 18%),
+      radial-gradient(circle at 60% 80%, rgba(200,155,42,0.06), transparent 20%);
+  }
+
+  .shimmer-line {
+    @apply relative overflow-hidden bg-white/5;
+  }
+
+  .shimmer-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    animation: shimmer 1.8s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    color: #a8b0bd;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-grid-faint {
+    background-size: 96px 96px;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
