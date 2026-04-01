@@ -47,15 +47,15 @@ export function RFQListScreen() {
               <ListFilter className="h-3.5 w-3.5" />
               RFQ queue shell
             </div>
-            <h1 className="mt-4 text-display text-4xl font-semibold text-foreground">
+            <h1 className="mt-4 text-display text-3xl font-semibold text-foreground lg:text-4xl">
               Operational RFQ list
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
               Search, scan, and open RFQs through the same boundary that will later connect to manager and intelligence services.
             </p>
           </div>
           {role === "manager" ? (
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="default">
               <Link href="/rfqs/new">
                 <PlusSquare className="h-4 w-4" />
                 Create RFQ
@@ -64,11 +64,11 @@ export function RFQListScreen() {
           ) : null}
         </div>
 
-        <div className="mt-6 grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="mt-8 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-11"
+              className="pl-11 h-11"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search RFQ ID, title, client, owner, or region"
               value={search}
@@ -76,12 +76,14 @@ export function RFQListScreen() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
+              className="h-11"
               onClick={() => setViewMode("table")}
               variant={viewMode === "table" ? "default" : "secondary"}
             >
               Table
             </Button>
             <Button
+              className="h-11"
               onClick={() => setViewMode("cards")}
               variant={viewMode === "cards" ? "default" : "secondary"}
             >
@@ -91,7 +93,7 @@ export function RFQListScreen() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {statusOptions.map((option) => (
             <Button
               key={option.value}
@@ -106,7 +108,7 @@ export function RFQListScreen() {
       </section>
 
       {loading ? (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-5 xl:grid-cols-3">
           <SkeletonCard className="h-[280px]" lines={6} />
           <SkeletonCard className="h-[280px]" lines={6} />
           <SkeletonCard className="h-[280px]" lines={6} />
@@ -122,7 +124,7 @@ export function RFQListScreen() {
           title="No RFQs in the current view"
         />
       ) : viewMode === "cards" ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           {filteredRfqs.map((rfq, index) => (
             <RFQCard key={rfq.id} index={index} rfq={rfq} />
           ))}

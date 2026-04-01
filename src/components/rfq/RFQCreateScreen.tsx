@@ -91,28 +91,28 @@ export function RFQCreateScreen() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-      <form className="surface-panel p-6" onSubmit={handleSave}>
+    <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+      <form className="surface-panel p-8" onSubmit={handleSave}>
         <div className="section-kicker">
           <ClipboardPlus className="h-3.5 w-3.5" />
           Create RFQ shell
         </div>
-        <h1 className="mt-5 text-display text-4xl font-semibold text-foreground">
-          Stage a new RFQ draft through the manager-owned intake path
+        <h1 className="mt-4 text-display text-3xl font-semibold text-foreground lg:text-4xl">
+          Stage a new RFQ draft through the manager path
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          The frontend keeps creation on the manager boundary and prepares the intelligence service for downstream artifact generation without embedding backend workflow logic in the UI.
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          The frontend keeps creation on the manager boundary and prepares the intelligence service for downstream artifact generation without embedding backend workflow logic.
         </p>
 
         <AnimatePresence>
           {saveMessage ? (
             <motion.div
               animate={{ opacity: 1, y: 0 }}
-              className="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4"
+              className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4"
               exit={{ opacity: 0, y: -10 }}
               initial={{ opacity: 0, y: 10 }}
             >
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-200">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-300">
                 <CheckCircle2 className="h-4 w-4" />
                 {saveMessage}
               </div>
@@ -121,13 +121,13 @@ export function RFQCreateScreen() {
         </AnimatePresence>
 
         {role !== "manager" ? (
-          <div className="mt-5 rounded-2xl border border-gold-500/20 bg-gold-500/10 p-4 text-sm leading-relaxed text-gold-100">
-            Worker view keeps create access visible for the defense demo, but the action stays manager-owned. Switch to the manager role to stage a draft.
+          <div className="mt-6 rounded-2xl border border-gold-500/25 bg-gold-500/10 p-4 text-sm leading-relaxed text-gold-700 dark:text-gold-200">
+            Worker view keeps create access visible for the demo, but the action stays manager-owned. Switch to the manager role to stage a draft.
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-5">
-          <div className="grid gap-5 md:grid-cols-2">
+        <div className="mt-8 grid gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="rfq-title">RFQ Title</Label>
               <Input
@@ -146,7 +146,7 @@ export function RFQCreateScreen() {
             </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="rfq-value">Estimated Value (SAR)</Label>
               <Input
@@ -168,14 +168,15 @@ export function RFQCreateScreen() {
           </div>
 
           <div className="space-y-2">
-            <Label>Priority</Label>
+            <Label>Priority Level</Label>
             <div className="flex flex-wrap gap-2">
               {priorities.map((option) => (
                 <Button
                   key={option}
                   onClick={() => setPriority(option)}
                   type="button"
-                  variant={priority === option ? "outline" : "secondary"}
+                  variant={priority === option ? "default" : "secondary"}
+                  className="capitalize"
                 >
                   {option}
                 </Button>
@@ -189,11 +190,12 @@ export function RFQCreateScreen() {
               id="rfq-summary"
               onChange={(event) => setSummaryLine(event.target.value)}
               value={summaryLine}
+              className="resize-none h-24"
             />
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-border">
           <Button disabled={saving || role !== "manager"} size="lg" type="submit">
             {saving ? "Staging Draft..." : "Stage Draft RFQ"}
           </Button>
@@ -207,10 +209,10 @@ export function RFQCreateScreen() {
         <div className="surface-panel p-6">
           <div className="section-kicker">
             <Sparkles className="h-3.5 w-3.5" />
-            Workflow selection
+            Workflow configuration
           </div>
-          <h2 className="mt-4 text-display text-2xl font-semibold text-foreground">
-            Choose the manager workflow shell
+          <h2 className="mt-3 text-xl font-semibold text-foreground">
+            Select manager workflow shell
           </h2>
           <div className="mt-5 space-y-3">
             {workflows.map((workflow) => (
@@ -218,27 +220,27 @@ export function RFQCreateScreen() {
                 key={workflow.id}
                 className={`w-full rounded-2xl border p-4 text-left transition-all ${
                   workflow.id === selectedWorkflowId
-                    ? "border-steel-500/35 bg-steel-500/12"
-                    : "border-white/8 bg-white/[0.03] hover:bg-white/[0.05]"
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border bg-card hover:bg-muted/40 dark:bg-white/[0.01] dark:hover:bg-white/[0.04]"
                 }`}
                 onClick={() => setSelectedWorkflowId(workflow.id)}
                 type="button"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-lg font-semibold text-foreground">
+                    <div className="text-sm font-semibold text-foreground">
                       {workflow.name}
                     </div>
-                    <div className="mt-1 text-sm text-muted">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       {workflow.description}
                     </div>
                   </div>
-                  <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted">
-                    {workflow.turnaroundDays} days • {workflow.stageCount} stages
+                  <div className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-mono text-[0.65rem] text-muted-foreground dark:bg-white/[0.04]">
+                    {workflow.turnaroundDays}d • {workflow.stageCount}s
                   </div>
                 </div>
-                <div className="mt-3 text-sm text-muted">
-                  Recommended for: {workflow.recommendedUse}
+                <div className="mt-3 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Use case</span>: {workflow.recommendedUse}
                 </div>
               </button>
             ))}
@@ -246,40 +248,30 @@ export function RFQCreateScreen() {
         </div>
 
         <div className="surface-panel p-6">
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-base font-semibold text-foreground">
             Stage preview
           </h3>
-          <p className="mt-2 text-sm text-muted">
-            The selected workflow determines lifecycle visibility in the manager domain and the points where intelligence artifacts become operationally relevant.
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            The workflow dictates lifecycle visibility and intelligence inflection points.
           </p>
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-3 border-l border-border pl-4">
             {selectedWorkflow?.stages.map((stage) => (
               <div
                 key={stage.id}
-                className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                className="relative"
               >
+                <div className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-border" />
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium text-foreground">{stage.label}</div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted">
+                  <div className="text-sm font-medium text-foreground">{stage.label}</div>
+                  <div className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
                     {stage.ownerRole}
                   </div>
                 </div>
-                <div className="mt-1 text-sm text-muted">{stage.summary}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{stage.summary}</div>
               </div>
             ))}
           </div>
         </div>
-
-        <UploadZone
-          description="Optional starting package drop for the demo shell. A real manager create flow can later hand off package intake to the intelligence service."
-          initialStatus="missing"
-          title="Optional Package ZIP"
-        />
-        <UploadZone
-          description="Optional workbook upload to prepare the downstream workbook profile and review boundary once the RFQ exists."
-          initialStatus="missing"
-          title="Optional Workbook"
-        />
       </div>
     </div>
   );

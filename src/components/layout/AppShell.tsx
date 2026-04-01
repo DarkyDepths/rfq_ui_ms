@@ -6,11 +6,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen lg:flex">
       <Sidebar />
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <div className="pointer-events-none absolute inset-0 grid-underlay opacity-40" />
-        <div className="pointer-events-none absolute inset-0 noise-underlay opacity-90" />
         <TopBar />
-        <main className="relative flex-1 px-4 pb-10 pt-4 lg:px-8 lg:pt-6">
-          {children}
+        <main className="relative flex-1 px-4 pb-12 pt-6 lg:px-10 lg:pt-8">
+          <div className="mx-auto max-w-[1400px]">{children}</div>
         </main>
       </div>
     </div>
