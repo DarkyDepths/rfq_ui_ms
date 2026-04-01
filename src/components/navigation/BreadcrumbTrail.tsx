@@ -9,10 +9,10 @@ export function BreadcrumbTrail() {
   const breadcrumbs = useBreadcrumbs();
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
       {breadcrumbs.map((crumb, index) => (
         <div key={crumb.href ?? crumb.label} className="flex items-center gap-2">
-          {index > 0 ? <ChevronRight className="h-4 w-4 text-white/20" /> : null}
+          {index > 0 ? <ChevronRight className="h-4 w-4 text-muted-foreground/40" /> : null}
           {crumb.isCurrent || !crumb.href ? (
             <span className="font-medium text-foreground">{crumb.label}</span>
           ) : (
