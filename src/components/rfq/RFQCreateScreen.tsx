@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createRfqDraft } from "@/connectors/manager/rfqs";
 import { listWorkflows } from "@/connectors/manager/workflows";
+import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import type { PriorityLevel } from "@/models/manager/rfq";
 import type { WorkflowModel } from "@/models/manager/workflow";
@@ -20,6 +21,7 @@ const priorities: PriorityLevel[] = ["normal", "high", "critical"];
 
 export function RFQCreateScreen() {
   const { role } = useRole();
+  const permissions = getPermissions(role);
   const [loading, setLoading] = useState(true);
   const [workflows, setWorkflows] = useState<WorkflowModel[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
@@ -63,7 +65,7 @@ export function RFQCreateScreen() {
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (role !== "manager" || !selectedWorkflow) {
+    if (!permissions.canCreateRfq || !selectedWorkflow) {
       return;
     }
 
@@ -120,9 +122,9 @@ export function RFQCreateScreen() {
           ) : null}
         </AnimatePresence>
 
-        {role !== "manager" ? (
+        {!permissions.canCreateRfq ? (
           <div className="mt-6 rounded-2xl border border-gold-500/25 bg-gold-500/10 p-4 text-sm leading-relaxed text-gold-700 dark:text-gold-200">
-            Worker view keeps create access visible for the demo, but the action stays manager-owned. Switch to the manager role to stage a draft.
+            Your role does not have permission to stage RFQ drafts. Switch to an operational role.
           </div>
         ) : null}
 
@@ -196,7 +198,7 @@ export function RFQCreateScreen() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-border">
-          <Button disabled={saving || role !== "manager"} size="lg" type="submit">
+          <Button disabled={saving || !permissions.canCreateRfq} size="lg" type="submit">
             {saving ? "Staging Draft..." : "Stage Draft RFQ"}
           </Button>
           <Button size="lg" type="button" variant="secondary">

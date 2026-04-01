@@ -15,8 +15,6 @@ export function RFQStageTimeline({
 }) {
   return (
     <div className="relative w-full overflow-hidden">
-      {/* Optional gradient fade out on the right edge to signify scrollability */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background/90 to-transparent" />
       
       <div
         className={cn(

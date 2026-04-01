@@ -23,7 +23,7 @@ export const standardWorkflowStages: ManagerStageTemplateResponse[] = [
     label: "Pricing",
     order: 3,
     summary: "Workbook pricing preparation and supplier checks.",
-    ownerRole: "worker",
+    ownerRole: "estimator",
   },
   {
     id: "review",
@@ -61,14 +61,14 @@ export const rapidWorkflowStages: ManagerStageTemplateResponse[] = [
     label: "Scope Scan",
     order: 2,
     summary: "Fast package parsing and feasibility scan.",
-    ownerRole: "worker",
+    ownerRole: "estimator",
   },
   {
     id: "pricing",
     label: "Pricing",
     order: 3,
     summary: "Commercial workbook response drafting.",
-    ownerRole: "worker",
+    ownerRole: "estimator",
   },
   {
     id: "approval",
@@ -106,14 +106,14 @@ export const strategicWorkflowStages: ManagerStageTemplateResponse[] = [
     label: "Package Analysis",
     order: 3,
     summary: "Deep package parsing and artifact preparation.",
-    ownerRole: "worker",
+    ownerRole: "estimator",
   },
   {
     id: "pricing",
     label: "Pricing",
     order: 4,
     summary: "Workbook construction and vendor checks.",
-    ownerRole: "worker",
+    ownerRole: "estimator",
   },
   {
     id: "technical-review",

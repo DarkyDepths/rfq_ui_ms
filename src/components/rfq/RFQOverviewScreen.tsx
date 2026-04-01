@@ -114,53 +114,22 @@ export function RFQOverviewScreen() {
                   <div>
                     <div className="section-kicker">
                       <Radar className="h-3.5 w-3.5" />
-                      Intelligence Posture
+                      Executive BI
                     </div>
                     <h2 className="mt-3 text-lg font-semibold text-foreground">
-                      Portfolio Readiness
+                      Dashboard Access
                     </h2>
                   </div>
-                  {portfolio ? (
-                    <Badge variant="steel">{portfolio.readinessAverage}% avg</Badge>
-                  ) : null}
                 </div>
 
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  {portfolio?.narrative ??
-                    "Intelligence portfolio summary loading..."}
+                  The full intelligence posture, timeline tracking, and portfolio readiness overview have been moved to the primary Dashboard view.
                 </p>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="stat-cell">
-                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
-                      Complete
-                    </div>
-                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
-                      {portfolio?.completeCount ?? "—"}
-                    </div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-amber-600 dark:text-gold-300">
-                      Partial
-                    </div>
-                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
-                      {portfolio?.partialCount ?? "—"}
-                    </div>
-                  </div>
-                  <div className="stat-cell">
-                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-400">
-                      Failed
-                    </div>
-                    <div className="mt-1.5 font-mono text-2xl font-semibold text-foreground">
-                      {portfolio?.failedCount ?? "—"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5">
+                <div className="mt-6">
                   <Button asChild variant="secondary">
-                    <Link href="/rfqs/RFQ-2026-0142">
-                      Open featured intelligence demo
+                    <Link href="/dashboard">
+                      Open Dashboard
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -200,7 +169,7 @@ export function RFQOverviewScreen() {
               </div>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 {role === "manager"
-                  ? "You see the full portfolio, intelligence posture, and can create or advance RFQs."
+                  ? "You see the operational portfolio queue and can create or advance RFQs. For macro intelligence, view the Dashboard."
                   : "You see assigned RFQs with pending actions. Portfolio controls are manager-owned."}
               </p>
             </div>

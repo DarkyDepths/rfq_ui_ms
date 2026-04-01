@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import {
+  BarChart,
   Files,
   FolderKanban,
   LayoutDashboard,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const iconMap: Record<NavigationIcon, typeof LayoutDashboard> = {
   "layout-dashboard": LayoutDashboard,
+  "bar-chart": BarChart,
   files: Files,
   "plus-square": PlusSquare,
   radar: Radar,
@@ -37,7 +39,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "border-b border-border bg-card lg:flex lg:min-h-screen lg:flex-col lg:border-b-0 lg:border-r",
+        "border-b border-border bg-card lg:sticky lg:top-0 lg:z-20 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r",
         sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[264px]",
       )}
     >
@@ -63,8 +65,8 @@ export function Sidebar() {
             <div className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-gold-600 dark:text-gold-300">
               Al Bassam Group
             </div>
-            <div className="truncate text-sm font-medium text-foreground">
-              RFQ Intelligence
+            <div className="mt-0.5 text-sm font-medium leading-tight text-foreground">
+              GHI Estimation Department
             </div>
           </div>
         ) : null}

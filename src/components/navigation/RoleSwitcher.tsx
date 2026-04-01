@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Shield, Wrench } from "lucide-react";
+import { Briefcase, Shield, Wrench } from "lucide-react";
+
+import { useRouter } from "next/navigation";
 
 import { useRole } from "@/context/role-context";
 import type { AppRole } from "@/models/ui/role";
@@ -12,12 +14,23 @@ const roles: Array<{
   label: string;
   icon: typeof Shield;
 }> = [
-  { value: "manager", label: "Manager", icon: Shield },
-  { value: "worker", label: "Worker", icon: Wrench },
+  { value: "executive", label: "Executive", icon: Briefcase },
+  { value: "manager", label: "Est. Manager", icon: Shield },
+  { value: "estimator", label: "Estimator", icon: Wrench },
 ];
 
 export function RoleSwitcher() {
   const { role, setRole } = useRole();
+  const router = useRouter();
+
+  const handleRoleChange = (newRole: AppRole) => {
+    setRole(newRole);
+    if (newRole === "executive") {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/overview");
+    }
+  };
 
   return (
     <div className="flex rounded-xl border border-border bg-muted/50 p-0.5 dark:bg-white/[0.03]">
@@ -32,7 +45,7 @@ export function RoleSwitcher() {
               "relative flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors",
               !isActive && "text-muted-foreground hover:text-foreground",
             )}
-            onClick={() => setRole(option.value)}
+            onClick={() => handleRoleChange(option.value)}
             type="button"
           >
             {isActive ? (

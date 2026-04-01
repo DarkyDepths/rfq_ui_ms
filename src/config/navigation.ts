@@ -2,6 +2,7 @@ import type { AppRole } from "@/models/ui/role";
 
 export type NavigationIcon =
   | "layout-dashboard"
+  | "bar-chart"
   | "files"
   | "plus-square"
   | "radar"
@@ -19,11 +20,19 @@ export interface NavigationItem {
 
 export const primaryNavigation: NavigationItem[] = [
   {
+    title: "Dashboard",
+    href: "/dashboard",
+    description: "Executive intelligence and pursuit analytics.",
+    icon: "bar-chart",
+    roles: ["executive", "manager"],
+    match: "exact",
+  },
+  {
     title: "Overview",
     href: "/overview",
     description: "Portfolio health, throughput, and intelligence posture.",
     icon: "layout-dashboard",
-    roles: ["manager", "worker"],
+    roles: ["manager", "estimator"],
     match: "exact",
   },
   {
@@ -31,7 +40,7 @@ export const primaryNavigation: NavigationItem[] = [
     href: "/rfqs",
     description: "Operational RFQ list with lifecycle and status visibility.",
     icon: "files",
-    roles: ["manager", "worker"],
+    roles: ["manager", "estimator"],
     match: "prefix",
   },
   {
@@ -39,7 +48,7 @@ export const primaryNavigation: NavigationItem[] = [
     href: "/rfqs/new",
     description: "Workflow-based intake shell for new RFQ creation.",
     icon: "plus-square",
-    roles: ["manager"],
+    roles: ["manager", "estimator"],
     match: "exact",
     highlight: true,
   },
@@ -48,7 +57,7 @@ export const primaryNavigation: NavigationItem[] = [
     href: "/rfqs/RFQ-2026-0142",
     description: "Fast path to the strongest complete intelligence demo state.",
     icon: "radar",
-    roles: ["manager", "worker"],
+    roles: ["manager", "estimator"],
     match: "exact",
   },
 ];

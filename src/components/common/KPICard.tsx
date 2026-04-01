@@ -43,8 +43,8 @@ export function KPICard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: index * 0.08 }}
     >
-      <Card className="surface-panel-hover h-full">
-        <CardContent className="relative overflow-hidden p-5">
+      <Card className="surface-panel-hover h-full overflow-hidden">
+        <CardContent className="relative p-5">
           <div
             className={cn(
               "absolute inset-x-0 top-0 h-20 bg-gradient-to-b opacity-50 dark:opacity-100",

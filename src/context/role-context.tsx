@@ -25,7 +25,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const storedRole = window.localStorage.getItem(STORAGE_KEY);
-    if (storedRole === "manager" || storedRole === "worker") {
+    if (storedRole === "executive" || storedRole === "manager" || storedRole === "estimator") {
       setRoleState(storedRole);
     }
   }, []);

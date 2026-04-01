@@ -39,6 +39,22 @@ interface RolePermissions {
 }
 
 export const rolePermissions: Record<AppRole, RolePermissions> = {
+  executive: {
+    canCreateRfq: false,
+    canViewAllRfqs: true,
+    canViewPortfolio: true,
+    canReprocessArtifacts: false,
+    canAdvanceStage: false,
+    canManageStageNotes: false,
+    canUploadFiles: false,
+    canViewIntelligence: true,
+    canViewArtifacts: true,
+    overviewTitle: "Executive Dashboard",
+    overviewSubtitle:
+      "High-level aggregate view of intelligence posture and financial conversions.",
+    detailTabs: ["intelligence"],
+    primaryCta: null,
+  },
   manager: {
     canCreateRfq: true,
     canViewAllRfqs: true,
@@ -55,8 +71,8 @@ export const rolePermissions: Record<AppRole, RolePermissions> = {
     detailTabs: ["operational", "intelligence", "artifacts"],
     primaryCta: { label: "Create RFQ", href: "/rfqs/new" },
   },
-  worker: {
-    canCreateRfq: false,
+  estimator: {
+    canCreateRfq: true,
     canViewAllRfqs: false,
     canViewPortfolio: false,
     canReprocessArtifacts: false,
@@ -69,7 +85,7 @@ export const rolePermissions: Record<AppRole, RolePermissions> = {
     overviewSubtitle:
       "Active RFQs assigned to you with pending actions and upload targets.",
     detailTabs: ["operational", "intelligence", "artifacts"],
-    primaryCta: null,
+    primaryCta: { label: "Create RFQ", href: "/rfqs/new" },
   },
 } as const;
 

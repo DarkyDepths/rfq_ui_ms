@@ -27,7 +27,7 @@ export const workbookProfileResponses: Record<string, WorkbookProfileResponse> =
       completion: 0,
       trackedSheets: [],
       missingSections: ["Workbook not uploaded"],
-      owner: "Awaiting worker upload",
+      owner: "Awaiting estimator upload",
     },
     "RFQ-2026-0126": {
       rfqId: "RFQ-2026-0126",
