@@ -22,7 +22,7 @@ import type { AppRole } from "@/models/ui/role";
  * └──────────────────────────────┴───────────┴───────────┘
  */
 
-interface RolePermissions {
+export interface RolePermissions {
   canCreateRfq: boolean;
   canViewAllRfqs: boolean;
   canViewPortfolio: boolean;

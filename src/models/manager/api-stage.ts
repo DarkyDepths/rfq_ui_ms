@@ -28,6 +28,7 @@ export interface ManagerApiStageFile {
   id: string;
   filename: string;
   download_url: string;
+  storage_reference?: string | null;
   type: string;
   uploaded_by: string;
   size_bytes?: number | null;
@@ -50,4 +51,34 @@ export interface ManagerApiStageDetail extends ManagerApiStageSummary {
   notes: ManagerApiStageNote[];
   files: ManagerApiStageFile[];
   subtasks: ManagerApiStageSubtask[];
+}
+
+export interface ManagerApiStageUpdateInput {
+  progress?: number;
+  assigned_team?: string;
+  captured_data?: Record<string, unknown>;
+  blocker_status?: "Blocked" | "Resolved";
+  blocker_reason_code?: string;
+}
+
+export interface ManagerApiStageNoteInput {
+  text: string;
+}
+
+export interface ManagerApiSubtaskCreateInput {
+  name: string;
+  assigned_to?: string;
+  due_date?: string;
+}
+
+export interface ManagerApiSubtaskUpdateInput {
+  name?: string;
+  assigned_to?: string;
+  due_date?: string;
+  progress?: number;
+  status?: "Open" | "In progress" | "Done";
+}
+
+export interface ManagerApiSubtaskListResponse {
+  data: ManagerApiStageSubtask[];
 }

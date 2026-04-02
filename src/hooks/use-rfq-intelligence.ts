@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 import { getArtifactCatalog, requestArtifactReprocess } from "@/connectors/intelligence/artifacts";
 import { getBriefingArtifact } from "@/connectors/intelligence/briefing";
 import { getIntelligenceSnapshot } from "@/connectors/intelligence/snapshot";
+import {
+  triggerIntelligenceIntake,
+  triggerIntelligenceOutcome,
+  triggerIntelligenceWorkbook,
+} from "@/connectors/intelligence/triggers";
 import {
   getWorkbookProfile,
   getWorkbookReview,
@@ -16,6 +22,11 @@ import type {
   WorkbookProfileModel,
   WorkbookReviewModel,
 } from "@/models/intelligence/workbook";
+import type {
+  IntelligenceLifecycleTriggerResult,
+  TriggerOutcomeInput,
+  TriggerWorkbookInput,
+} from "@/models/intelligence/triggers";
 import { formatDate } from "@/utils/format";
 
 export interface IntelligenceResourceState<T> {
@@ -106,6 +117,7 @@ export function useRfqIntelligence(
   enabled: boolean,
   managerUpdatedAt?: string,
 ) {
+  const [reloadKey, setReloadKey] = useState(0);
   const [snapshot, setSnapshot] = useState<
     IntelligenceResourceState<IntelligenceSnapshotModel | null>
   >(createState(null, enabled));
@@ -135,7 +147,7 @@ export function useRfqIntelligence(
     let active = true;
 
     const loadResource = async <T,>(
-      setState: React.Dispatch<React.SetStateAction<IntelligenceResourceState<T>>>,
+      setState: Dispatch<SetStateAction<IntelligenceResourceState<T>>>,
       initialData: T,
       loader: () => Promise<T>,
       fallback: string,
@@ -201,7 +213,7 @@ export function useRfqIntelligence(
     return () => {
       active = false;
     };
-  }, [enabled, rfqId]);
+  }, [enabled, reloadKey, rfqId]);
 
   const staleIntel = useMemo(
     () =>
@@ -227,10 +239,30 @@ export function useRfqIntelligence(
   return {
     artifacts,
     briefing,
+    refresh: () => setReloadKey((value) => value + 1),
     requestReprocess: (kind: ReprocessKind): Promise<ReprocessResult> =>
       requestArtifactReprocess(rfqId, kind),
     snapshot,
     staleIntel,
+    triggerIntake: async (): Promise<IntelligenceLifecycleTriggerResult> => {
+      const response = await triggerIntelligenceIntake(rfqId);
+      setReloadKey((value) => value + 1);
+      return response;
+    },
+    triggerOutcome: async (
+      input: TriggerOutcomeInput,
+    ): Promise<IntelligenceLifecycleTriggerResult> => {
+      const response = await triggerIntelligenceOutcome(rfqId, input);
+      setReloadKey((value) => value + 1);
+      return response;
+    },
+    triggerWorkbook: async (
+      input?: TriggerWorkbookInput,
+    ): Promise<IntelligenceLifecycleTriggerResult> => {
+      const response = await triggerIntelligenceWorkbook(rfqId, input);
+      setReloadKey((value) => value + 1);
+      return response;
+    },
     workbookProfile,
     workbookReview,
   };

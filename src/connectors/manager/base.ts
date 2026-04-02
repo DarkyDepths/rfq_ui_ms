@@ -1,5 +1,6 @@
 import { apiConfig } from "@/config/api";
 import { requestJson, type RequestOptions } from "@/lib/http-client";
+import { buildManagerActorHeaders } from "@/lib/manager-actor";
 
 type QueryValue =
   | string
@@ -35,13 +36,44 @@ function buildManagerUrl(
   return url.toString();
 }
 
+export interface ManagerRequestOptions extends RequestOptions {
+  actorPermissions?: string[];
+  actorTeam?: string;
+  actorUserId?: string;
+  actorUserName?: string;
+}
+
 export function requestManagerJson<T>(
   path: string,
-  init?: RequestOptions,
+  init?: ManagerRequestOptions,
   query?: Record<string, QueryValue>,
 ) {
+  const {
+    actorPermissions,
+    actorTeam,
+    actorUserId,
+    actorUserName,
+    headers,
+    ...requestOptions
+  } = init ?? {};
+
+  const mergedHeaders = new Headers(headers ?? {});
+  const actorHeaders = buildManagerActorHeaders({
+    permissions: actorPermissions,
+    team: actorTeam,
+    userId: actorUserId,
+    userName: actorUserName,
+  });
+
+  Object.entries(actorHeaders).forEach(([key, value]) => {
+    if (!mergedHeaders.has(key)) {
+      mergedHeaders.set(key, value);
+    }
+  });
+
   return requestJson<T>(buildManagerUrl(path, query), {
-    ...init,
-    authToken: init?.authToken ?? apiConfig.managerAuthToken,
+    ...requestOptions,
+    headers: mergedHeaders,
+    authToken: requestOptions.authToken ?? apiConfig.managerAuthToken,
   });
 }

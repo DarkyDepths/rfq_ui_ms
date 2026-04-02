@@ -2,29 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ClipboardCheck,
-  Layers3,
-  Radar,
-  RotateCw,
-  Sparkles,
-} from "lucide-react";
+import { ClipboardCheck, Layers3, Radar, Sparkles } from "lucide-react";
 
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
-import { UploadZone } from "@/components/common/UploadZone";
+import { IntelligenceActionsPanel } from "@/components/intelligence/IntelligenceActionsPanel";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
+import { RfqOperationalWorkspace } from "@/components/rfq/RfqOperationalWorkspace";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { apiConfig } from "@/config/api";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useRfqDetail } from "@/hooks/use-rfq-detail";
 import { useRfqIntelligence } from "@/hooks/use-rfq-intelligence";
-import type { ReprocessKind } from "@/models/intelligence/artifacts";
 import { intelligenceAvailabilityMeta } from "@/utils/status";
 
 type DetailTab = "operational" | "intelligence" | "artifacts";
@@ -45,14 +38,13 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
   const isDemoMode = apiConfig.useMockData;
   const visibleTabValues = permissions.detailTabs as readonly DetailTab[];
   const visibleTabs = tabConfig.filter((tab) => visibleTabValues.includes(tab.value));
-  const { error, loading, rfq } = useRfqDetail(rfqId);
+  const { error, loading, refresh, rfq } = useRfqDetail(rfqId);
   const intelligence = useRfqIntelligence(
     rfqId,
     permissions.canViewIntelligence || permissions.canViewArtifacts,
     rfq?.updatedAtValue,
   );
   const [activeTab, setActiveTab] = useState<DetailTab>("operational");
-  const [reprocessMessage, setReprocessMessage] = useState("");
 
   useEffect(() => {
     if (!visibleTabValues.includes(activeTab)) {
@@ -60,23 +52,6 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
       setActiveTab(nextTab?.value ?? "intelligence");
     }
   }, [activeTab, visibleTabValues]);
-
-  const handleReprocess = async (kind: ReprocessKind) => {
-    if (!permissions.canReprocessArtifacts) {
-      return;
-    }
-
-    try {
-      const response = await intelligence.requestReprocess(kind);
-      setReprocessMessage(response.message);
-    } catch (requestError) {
-      setReprocessMessage(
-        requestError instanceof Error
-          ? requestError.message
-          : "Reprocess request could not be submitted.",
-      );
-    }
-  };
 
   if (loading) {
     return (
@@ -207,9 +182,7 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
             <button
               key={tab.value}
               className={`relative flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                isActive
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setActiveTab(tab.value)}
               type="button"
@@ -239,302 +212,70 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
           transition={{ duration: 0.2 }}
         >
           {activeTab === "operational" ? (
-            <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-              <div className="space-y-5">
-                <div className="surface-panel p-5">
-                  <div className="section-kicker">
-                    <ClipboardCheck className="h-3.5 w-3.5" />
-                    Operational Posture
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="stat-cell">
-                      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Current Stage
-                      </div>
-                      <div className="mt-1 font-medium text-foreground">
-                        {rfq.stageLabel}
-                      </div>
-                    </div>
-                    <div className="stat-cell">
-                      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Priority
-                      </div>
-                      <div className="mt-1 font-medium text-foreground">
-                        {rfq.priority}
-                      </div>
-                    </div>
-                  </div>
-                  {rfq.outcomeReason ? (
-                    <div className="mt-3 stat-cell">
-                      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Outcome Reason
-                      </div>
-                      <div className="mt-1 text-sm text-muted-foreground">
-                        {rfq.outcomeReason}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="surface-panel p-5">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Stage Notes
-                  </h3>
-                  {rfq.stageNotes.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No current-stage notes are available.
-                    </p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {rfq.stageNotes.map((note) => (
-                        <div key={note.id} className="stat-cell">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium text-foreground">
-                              {note.author}
-                            </span>
-                            <Badge
-                              variant={
-                                note.tone === "success"
-                                  ? "emerald"
-                                  : note.tone === "warning"
-                                    ? "gold"
-                                    : "steel"
-                              }
-                            >
-                              {note.createdLabel}
-                            </Badge>
-                          </div>
-                          <p className="mt-1.5 text-sm text-muted-foreground">
-                            {note.note}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="surface-panel p-5">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Recent Files
-                  </h3>
-                  {rfq.recentFiles.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No current-stage files are available.
-                    </p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {rfq.recentFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className="stat-cell flex items-center justify-between gap-3"
-                        >
-                          <div>
-                            <div className="text-sm font-medium text-foreground">
-                              {file.label}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {file.type} · {file.uploadedLabel}
-                              {file.uploadedBy ? ` · ${file.uploadedBy}` : ""}
-                            </div>
-                          </div>
-                          {file.status ? (
-                            <Badge
-                              variant={
-                                file.status === "processed"
-                                  ? "emerald"
-                                  : file.status === "rejected"
-                                    ? "rose"
-                                    : "steel"
-                              }
-                            >
-                              {file.status}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                {isDemoMode && rfq.uploads.length > 0 ? (
-                  rfq.uploads.map((upload) => (
-                    <UploadZone
-                      key={upload.kind}
-                      description={upload.description}
-                      fileName={upload.fileName}
-                      initialStatus={upload.status}
-                      title={upload.title}
-                      uploadedLabel={upload.uploadedLabel}
-                    />
-                  ))
-                ) : (
-                  <div className="surface-panel p-5">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Upload Actions
-                    </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      File upload actions are not connected in this live slice. Existing current-stage files above come directly from the manager service.
-                    </p>
-                  </div>
-                )}
-
-                <div className="surface-panel p-5">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Subtasks
-                  </h3>
-                  {rfq.subtasks.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No current-stage subtasks are available.
-                    </p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {rfq.subtasks.map((task) => (
-                        <div key={task.id} className="stat-cell">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium text-foreground">
-                              {task.label}
-                            </span>
-                            <Badge
-                              variant={
-                                task.state === "done"
-                                  ? "emerald"
-                                  : task.state === "in_progress"
-                                    ? "steel"
-                                    : "pending"
-                              }
-                            >
-                              {task.state.replace("_", " ")}
-                            </Badge>
-                          </div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {task.owner} · due {task.dueLabel}
-                            {typeof task.progress === "number"
-                              ? ` · ${task.progress}%`
-                              : ""}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="surface-panel p-5">
-                  <Badge
-                    variant={
-                      role === "manager"
-                        ? "steel"
-                        : role === "executive"
-                          ? "gold"
-                          : "pending"
-                    }
-                  >
-                    {role === "manager"
-                      ? "Manager Controls"
-                      : role === "executive"
-                        ? "Executive Context"
-                        : "Estimator Focus"}
-                  </Badge>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {role === "manager"
-                      ? "Managers can review lifecycle state, notes, files, and subtasks directly from the manager microservice."
-                      : role === "executive"
-                        ? "Executives consume this view as a manager-backed operational shell while intelligence remains a separate concern."
-                        : "Estimators see current-stage operational context while control-plane actions remain manager-owned."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {activeTab === "intelligence" ? (
-            <IntelligencePanel
-              briefing={intelligence.briefing}
-              snapshot={intelligence.snapshot}
-              staleIntel={intelligence.staleIntel}
-              workbookProfile={intelligence.workbookProfile}
-              workbookReview={intelligence.workbookReview}
+            <RfqOperationalWorkspace
+              onRefreshRfq={refresh}
+              permissions={permissions}
+              rfq={rfq}
+              role={role}
             />
           ) : null}
 
-          {activeTab === "artifacts" ? (
+          {activeTab === "intelligence" ? (
             <div className="space-y-5">
-              {permissions.canReprocessArtifacts ? (
-                <div className="surface-panel p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">
-                        Reprocess Actions
-                      </h3>
-                      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                        Only confirmed intelligence reprocess routes are exposed here. The current backend accepts these requests and may still return a stub acceptance message.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={() => handleReprocess("intake")}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        <RotateCw className="mr-2 h-3.5 w-3.5" />
-                        Reprocess Intake
-                      </Button>
-                      <Button
-                        onClick={() => handleReprocess("workbook")}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        <RotateCw className="mr-2 h-3.5 w-3.5" />
-                        Reprocess Workbook
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {reprocessMessage ? (
-                <div className="rounded-xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
-                  {reprocessMessage}
-                </div>
-              ) : null}
-
-              {intelligence.artifacts.loading ? (
-                <div className="grid gap-5 xl:grid-cols-2">
-                  <SkeletonCard className="h-[240px]" lines={5} />
-                  <SkeletonCard className="h-[240px]" lines={5} />
-                  <SkeletonCard className="h-[240px]" lines={5} />
-                  <SkeletonCard className="h-[240px]" lines={5} />
-                </div>
-              ) : intelligence.artifacts.error ? (
-                <EmptyState
-                  description={intelligence.artifacts.error}
-                  title="Artifact catalog unavailable"
-                />
-              ) : intelligence.artifacts.data.length === 0 ? (
-                <div className="surface-panel p-6">
-                  <div className="section-kicker">
-                    <Layers3 className="h-3.5 w-3.5" />
-                    No Artifacts Yet
-                  </div>
-                  <h2 className="mt-3 text-lg font-semibold text-foreground">
-                    No intelligence artifacts have been generated for this RFQ
-                  </h2>
-                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                    The artifact index endpoint returned an empty list, so there is nothing to display yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-5 xl:grid-cols-2">
-                  {intelligence.artifacts.data.map((artifact) => (
-                    <ArtifactCard
-                      key={`${artifact.id}-${artifact.version}`}
-                      artifact={artifact}
-                    />
-                  ))}
-                </div>
-              )}
+              <IntelligenceActionsPanel
+                onRefresh={intelligence.refresh}
+                onReprocess={async (kind) => intelligence.requestReprocess(kind)}
+                onTriggerIntake={intelligence.triggerIntake}
+                onTriggerOutcome={intelligence.triggerOutcome}
+                onTriggerWorkbook={intelligence.triggerWorkbook}
+                permissions={permissions}
+                rfqOutcomeReason={rfq.outcomeReason}
+                rfqStatus={rfq.status}
+                role={role}
+              />
+              <IntelligencePanel
+                briefing={intelligence.briefing}
+                snapshot={intelligence.snapshot}
+                staleIntel={intelligence.staleIntel}
+                workbookProfile={intelligence.workbookProfile}
+                workbookReview={intelligence.workbookReview}
+              />
             </div>
+          ) : null}
+
+          {activeTab === "artifacts" ? (
+            intelligence.artifacts.loading ? (
+              <div className="grid gap-5 xl:grid-cols-2">
+                <SkeletonCard className="h-[240px]" lines={5} />
+                <SkeletonCard className="h-[240px]" lines={5} />
+                <SkeletonCard className="h-[240px]" lines={5} />
+                <SkeletonCard className="h-[240px]" lines={5} />
+              </div>
+            ) : intelligence.artifacts.error ? (
+              <EmptyState
+                description={intelligence.artifacts.error}
+                title="Artifact catalog unavailable"
+              />
+            ) : intelligence.artifacts.data.length === 0 ? (
+              <div className="surface-panel p-6">
+                <div className="section-kicker">
+                  <Layers3 className="h-3.5 w-3.5" />
+                  No Artifacts Yet
+                </div>
+                <h2 className="mt-3 text-lg font-semibold text-foreground">
+                  No intelligence artifacts have been generated for this RFQ
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                  Trigger intake or workbook processing from the Intelligence tab when the manager-side prerequisites are in place.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-5 xl:grid-cols-2">
+                {intelligence.artifacts.data.map((artifact) => (
+                  <ArtifactCard key={`${artifact.id}-${artifact.version}`} artifact={artifact} />
+                ))}
+              </div>
+            )
           ) : null}
         </motion.div>
       </AnimatePresence>

@@ -1,4 +1,4 @@
-type HttpMethod = "GET" | "POST" | "PATCH";
+type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 export class HttpError extends Error {
   status: number;
@@ -19,10 +19,14 @@ export async function requestJson<T>(
   input: string,
   init?: RequestOptions,
 ): Promise<T> {
-  const { authToken, ...requestInit } = init ?? {};
-  const headers = new Headers(init?.headers ?? {});
+  const { authToken, headers: rawHeaders, ...requestInit } = init ?? {};
+  const headers = new Headers(rawHeaders ?? {});
 
-  if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) {
+  if (
+    requestInit.body !== undefined &&
+    !headers.has("Content-Type") &&
+    !(requestInit.body instanceof FormData)
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -32,13 +36,17 @@ export async function requestJson<T>(
 
   const response = await fetch(input, {
     cache: "no-store",
-    headers,
     ...requestInit,
+    headers,
   });
 
   if (!response.ok) {
     const message = (await response.text()) || `Request failed with status ${response.status}`;
     throw new HttpError(response.status, message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return (await response.json()) as T;

@@ -33,3 +33,25 @@ export interface StageProgressModel extends StageTemplateModel {
   statusLabel?: string;
   blockerReasonCode?: string;
 }
+
+export interface StageWorkspaceModel extends StageProgressModel {
+  capturedData: Record<string, string>;
+  mandatoryFields: string[];
+  blockerStatus?: "Blocked" | "Resolved";
+  plannedStartValue?: string;
+  plannedStartLabel?: string;
+  plannedEndValue?: string;
+  plannedEndLabel?: string;
+  actualStartValue?: string;
+  actualStartLabel?: string;
+  actualEndValue?: string;
+  actualEndLabel?: string;
+}
+
+export interface StageUpdateInput {
+  progress?: number;
+  assignedTeam?: string;
+  capturedData?: Record<string, string>;
+  blockerStatus?: "Blocked" | "Resolved";
+  blockerReasonCode?: string;
+}

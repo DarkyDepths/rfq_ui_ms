@@ -1,3 +1,4 @@
+import { apiConfig } from "@/config/api";
 import type {
   ManagerApiStageDetail,
   ManagerApiStageFile,
@@ -17,6 +18,8 @@ import type {
   StageProgressModel,
   StageProgressState,
   StageTemplateModel,
+  StageUpdateInput,
+  StageWorkspaceModel,
 } from "@/models/manager/stage";
 import { formatDate } from "@/utils/format";
 
@@ -79,6 +82,14 @@ function resolveStageTimestamp(stage: ManagerApiStageSummary) {
   return undefined;
 }
 
+function resolveDownloadUrl(downloadUrl: string) {
+  if (downloadUrl.startsWith("http")) {
+    return downloadUrl;
+  }
+
+  return `${apiConfig.managerBaseUrl}${downloadUrl}`;
+}
+
 export function translateManagerWorkflowStageTemplate(
   stage: ManagerApiWorkflowStageTemplate,
 ): StageTemplateModel {
@@ -129,9 +140,11 @@ export function translateManagerStageFile(
     id: file.id,
     label: file.filename,
     type: file.type,
+    uploadedAtValue: file.uploaded_at,
     uploadedLabel: formatDate(file.uploaded_at),
     uploadedBy: file.uploaded_by,
-    downloadUrl: file.download_url,
+    downloadUrl: resolveDownloadUrl(file.download_url),
+    storageReference: file.storage_reference ?? undefined,
   };
 }
 
@@ -155,6 +168,7 @@ export function translateManagerSubtask(
     id: subtask.id,
     label: subtask.name,
     owner: subtask.assigned_to ?? "Unassigned",
+    dueDateValue: subtask.due_date ?? undefined,
     dueLabel: subtask.due_date ? formatDate(subtask.due_date) : "Pending",
     state: normalizeSubtaskState(subtask.status),
     progress: subtask.progress,
@@ -168,5 +182,103 @@ export function translateManagerStageDetailCollections(
     files: stage ? stage.files.map(translateManagerStageFile) : [],
     notes: stage ? stage.notes.map(translateManagerStageNote) : [],
     subtasks: stage ? stage.subtasks.map(translateManagerSubtask) : [],
+  };
+}
+
+export function translateManagerStageWorkspace(
+  stage: ManagerApiStageDetail,
+): StageWorkspaceModel {
+  const mandatoryFields = (stage.mandatory_fields ?? "")
+    .split(",")
+    .map((field) => field.trim())
+    .filter(Boolean);
+
+  const capturedData = Object.entries(stage.captured_data ?? {}).reduce<Record<string, string>>(
+    (accumulator, [key, value]) => {
+      accumulator[key] =
+        typeof value === "string" ? value : JSON.stringify(value);
+      return accumulator;
+    },
+    {},
+  );
+
+  mandatoryFields.forEach((field) => {
+    if (!(field in capturedData)) {
+      capturedData[field] = "";
+    }
+  });
+
+  return {
+    id: stage.id,
+    label: stage.name,
+    order: stage.order,
+    summary: stage.assigned_team ? `Assigned team: ${stage.assigned_team}` : undefined,
+    assignedTeam: stage.assigned_team ?? undefined,
+    state: resolveStageProgressState(stage.status, stage.blocker_status),
+    progress: stage.progress,
+    statusLabel: stage.status,
+    blockerStatus:
+      stage.blocker_status === "Blocked" || stage.blocker_status === "Resolved"
+        ? stage.blocker_status
+        : undefined,
+    blockerReasonCode: stage.blocker_reason_code ?? undefined,
+    capturedData,
+    mandatoryFields,
+    plannedStartValue: stage.planned_start ?? undefined,
+    plannedStartLabel: stage.planned_start ? formatDate(stage.planned_start) : undefined,
+    plannedEndValue: stage.planned_end ?? undefined,
+    plannedEndLabel: stage.planned_end ? formatDate(stage.planned_end) : undefined,
+    actualStartValue: stage.actual_start ?? undefined,
+    actualStartLabel: stage.actual_start ? formatDate(stage.actual_start) : undefined,
+    actualEndValue: stage.actual_end ?? undefined,
+    actualEndLabel: stage.actual_end ? formatDate(stage.actual_end) : undefined,
+  };
+}
+
+export function translateStageUpdateInput(
+  input: StageUpdateInput,
+): Record<string, unknown> {
+  const captured_data = input.capturedData
+    ? Object.entries(input.capturedData).reduce<Record<string, unknown>>(
+        (accumulator, [key, value]) => {
+          const trimmed = value.trim();
+
+          if (!trimmed) {
+            return accumulator;
+          }
+
+          if (trimmed === "true") {
+            accumulator[key] = true;
+            return accumulator;
+          }
+
+          if (trimmed === "false") {
+            accumulator[key] = false;
+            return accumulator;
+          }
+
+          if (!Number.isNaN(Number(trimmed)) && trimmed !== "") {
+            accumulator[key] = Number(trimmed);
+            return accumulator;
+          }
+
+          try {
+            accumulator[key] = JSON.parse(trimmed);
+            return accumulator;
+          } catch {
+            accumulator[key] = trimmed;
+            return accumulator;
+          }
+        },
+        {},
+      )
+    : undefined;
+
+  return {
+    progress: input.progress,
+    assigned_team: input.assignedTeam,
+    captured_data,
+    blocker_status: input.blockerStatus,
+    blocker_reason_code: input.blockerReasonCode,
   };
 }

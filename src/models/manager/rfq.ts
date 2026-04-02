@@ -119,19 +119,56 @@ export interface RfqFileModel {
   id: string;
   label: string;
   type: string;
+  uploadedAtValue?: string;
   uploadedLabel: string;
   status?: "processed" | "pending" | "rejected";
   uploadedBy?: string;
   downloadUrl?: string;
+  storageReference?: string;
 }
 
 export interface RfqSubtaskModel {
   id: string;
   label: string;
   owner: string;
+  dueDateValue?: string;
   dueLabel: string;
   state: "open" | "in_progress" | "done";
   progress?: number;
+}
+
+export interface ReminderModel {
+  id: string;
+  rfqId: string;
+  rfqStageId?: string | null;
+  type: "internal" | "external";
+  message: string;
+  dueDateValue: string;
+  dueLabel: string;
+  status: string;
+  delayDays: number;
+  assignedTo?: string;
+  createdBy?: string;
+  createdLabel: string;
+  updatedLabel?: string;
+  lastSentLabel?: string;
+  sendCount: number;
+}
+
+export interface ReminderStatsModel {
+  openTasks: number;
+  overdueTasks: number;
+  dueThisWeek: number;
+  withActiveReminders: number;
+}
+
+export interface ReminderRuleModel {
+  id: string;
+  name: string;
+  description?: string;
+  scope: string;
+  isActive: boolean;
+  createdLabel: string;
 }
 
 export interface UploadSlotModel {
@@ -209,4 +246,27 @@ export interface RfqMutationResult {
   id: string;
   message: string;
   status: "demo_staged" | "created" | "updated";
+}
+
+export interface SubtaskCreateInput {
+  name: string;
+  assignedTo?: string;
+  dueDate?: string;
+}
+
+export interface SubtaskUpdateInput {
+  name?: string;
+  assignedTo?: string;
+  dueDate?: string;
+  progress?: number;
+  status?: "Open" | "In progress" | "Done";
+}
+
+export interface ReminderCreateInput {
+  rfqId: string;
+  rfqStageId?: string;
+  type: "internal" | "external";
+  message: string;
+  dueDate: string;
+  assignedTo?: string;
 }

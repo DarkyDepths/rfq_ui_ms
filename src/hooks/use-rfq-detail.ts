@@ -12,6 +12,7 @@ interface DetailState {
 }
 
 export function useRfqDetail(rfqId: string) {
+  const [reloadKey, setReloadKey] = useState(0);
   const [state, setState] = useState<DetailState>({
     error: null,
     loading: true,
@@ -55,7 +56,10 @@ export function useRfqDetail(rfqId: string) {
     return () => {
       active = false;
     };
-  }, [rfqId]);
+  }, [reloadKey, rfqId]);
 
-  return state;
+  return {
+    ...state,
+    refresh: () => setReloadKey((value) => value + 1),
+  };
 }
