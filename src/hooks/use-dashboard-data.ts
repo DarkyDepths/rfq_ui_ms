@@ -2,23 +2,28 @@
 
 import { useEffect, useState } from "react";
 
-import { getDashboardMetrics, listRfqs } from "@/connectors/manager/rfqs";
-import type { RfqCardModel } from "@/models/manager/rfq";
-import type { KPIMetricModel } from "@/models/ui/dashboard";
+import {
+  getDashboardAnalytics,
+  getDashboardMetrics,
+} from "@/connectors/manager/rfqs";
+import type {
+  KPIMetricModel,
+  ManagerDashboardAnalyticsModel,
+} from "@/models/ui/dashboard";
 
-interface OverviewState {
+interface DashboardState {
+  analytics: ManagerDashboardAnalyticsModel | null;
   error: string | null;
   loading: boolean;
   metrics: KPIMetricModel[];
-  rfqs: RfqCardModel[];
 }
 
-export function useOverviewData() {
-  const [state, setState] = useState<OverviewState>({
+export function useDashboardData() {
+  const [state, setState] = useState<DashboardState>({
+    analytics: null,
     error: null,
     loading: true,
     metrics: [],
-    rfqs: [],
   });
 
   useEffect(() => {
@@ -26,9 +31,9 @@ export function useOverviewData() {
 
     async function load() {
       try {
-        const [metrics, rfqs] = await Promise.all([
+        const [metrics, analytics] = await Promise.all([
           getDashboardMetrics(),
-          listRfqs({ size: 20 }),
+          getDashboardAnalytics(),
         ]);
 
         if (!active) {
@@ -36,10 +41,10 @@ export function useOverviewData() {
         }
 
         setState({
+          analytics,
           error: null,
           loading: false,
           metrics,
-          rfqs,
         });
       } catch (error) {
         if (!active) {
@@ -47,13 +52,13 @@ export function useOverviewData() {
         }
 
         setState({
+          analytics: null,
           error:
             error instanceof Error
               ? error.message
-              : "Overview data could not be loaded.",
+              : "Dashboard data could not be loaded.",
           loading: false,
           metrics: [],
-          rfqs: [],
         });
       }
     }

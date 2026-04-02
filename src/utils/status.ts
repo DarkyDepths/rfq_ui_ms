@@ -11,6 +11,10 @@ export const rfqStatusMeta: Record<
     tone: "steel" | "gold" | "emerald" | "rose" | "pending";
   }
 > = {
+  draft: {
+    label: "Draft",
+    tone: "pending",
+  },
   in_preparation: {
     label: "In Preparation",
     tone: "pending",
@@ -23,9 +27,17 @@ export const rfqStatusMeta: Record<
     label: "Submitted",
     tone: "steel",
   },
-  won: {
-    label: "Won",
+  awarded: {
+    label: "Awarded",
     tone: "emerald",
+  },
+  lost: {
+    label: "Lost",
+    tone: "rose",
+  },
+  cancelled: {
+    label: "Cancelled",
+    tone: "rose",
   },
   attention_required: {
     label: "Partial / Warning",

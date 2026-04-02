@@ -1,7 +1,11 @@
 import { apiConfig } from "@/config/api";
+import { requestManagerJson } from "@/connectors/manager/base";
 import { managerRfqDetailResponses } from "@/demo/manager/rfqs";
 import { managerWorkflowResponses } from "@/demo/manager/workflows";
-import { requestJson } from "@/lib/http-client";
+import type {
+  ManagerApiStageDetail,
+  ManagerApiStageListResponse,
+} from "@/models/manager/api-stage";
 import type {
   RfqFileModel,
   RfqSubtaskModel,
@@ -12,7 +16,13 @@ import type {
   StageProgressModel,
   StageTemplateModel,
 } from "@/models/manager/stage";
-import { translateStageProgress, translateStageTemplate } from "@/translators/manager/stages";
+import {
+  translateManagerStageDetailCollections,
+  translateManagerStageSummary,
+  translateManagerWorkflowStageTemplate,
+  translateStageProgress,
+  translateStageTemplate,
+} from "@/translators/manager/stages";
 import { sleep } from "@/utils/async";
 
 export async function getWorkflowStages(
@@ -26,11 +36,17 @@ export async function getWorkflowStages(
     return workflow ? workflow.stages.map(translateStageTemplate) : [];
   }
 
-  const response = await requestJson<ManagerStageStatusResponse[]>(
-    `${apiConfig.managerBaseUrl}/workflows/${workflowId}/stages`,
-  );
+  const response = await requestManagerJson<{
+    stages: {
+      id: string;
+      name: string;
+      order: number;
+      default_team?: string | null;
+      planned_duration_days: number;
+    }[];
+  }>(`/workflows/${workflowId}`);
 
-  return response.map(translateStageTemplate);
+  return response.stages.map(translateManagerWorkflowStageTemplate);
 }
 
 export async function getRfqStages(rfqId: string): Promise<StageProgressModel[]> {
@@ -41,14 +57,30 @@ export async function getRfqStages(rfqId: string): Promise<StageProgressModel[]>
     );
   }
 
-  const response = await requestJson<ManagerStageStatusResponse[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stages`,
+  const response = await requestManagerJson<ManagerApiStageListResponse>(
+    `/rfqs/${rfqId}/stages`,
   );
 
-  return response.map(translateStageProgress);
+  return response.data.map(translateManagerStageSummary);
 }
 
-export async function listStageNotes(rfqId: string): Promise<StageNoteModel[]> {
+async function getStageDetail(
+  rfqId: string,
+  stageId: string,
+): Promise<ManagerApiStageDetail | null> {
+  if (!stageId) {
+    return null;
+  }
+
+  return requestManagerJson<ManagerApiStageDetail>(
+    `/rfqs/${rfqId}/stages/${stageId}`,
+  );
+}
+
+export async function listStageNotes(
+  rfqId: string,
+  stageId?: string,
+): Promise<StageNoteModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const notes = managerRfqDetailResponses[rfqId]?.stageNotes ?? [];
@@ -61,12 +93,18 @@ export async function listStageNotes(rfqId: string): Promise<StageNoteModel[]> {
     }));
   }
 
-  return requestJson<StageNoteModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stage-notes`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).notes;
 }
 
-export async function listStageFiles(rfqId: string): Promise<RfqFileModel[]> {
+export async function listStageFiles(
+  rfqId: string,
+  stageId?: string,
+): Promise<RfqFileModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const files = managerRfqDetailResponses[rfqId]?.recentFiles ?? [];
@@ -79,12 +117,18 @@ export async function listStageFiles(rfqId: string): Promise<RfqFileModel[]> {
     }));
   }
 
-  return requestJson<RfqFileModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stage-files`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).files;
 }
 
-export async function listSubtasks(rfqId: string): Promise<RfqSubtaskModel[]> {
+export async function listSubtasks(
+  rfqId: string,
+  stageId?: string,
+): Promise<RfqSubtaskModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const tasks = managerRfqDetailResponses[rfqId]?.subtasks ?? [];
@@ -97,7 +141,10 @@ export async function listSubtasks(rfqId: string): Promise<RfqSubtaskModel[]> {
     }));
   }
 
-  return requestJson<RfqSubtaskModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/subtasks`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).subtasks;
 }

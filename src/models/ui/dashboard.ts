@@ -14,6 +14,27 @@ export interface KPIMetricModel {
   tone: "steel" | "gold" | "emerald" | "amber";
 }
 
+export interface DashboardAnalyticsMetricModel {
+  id: string;
+  label: string;
+  value: number;
+  displayValue: string;
+  helper: string;
+  tone: "steel" | "gold" | "emerald" | "amber";
+}
+
+export interface DashboardClientAnalyticsModel {
+  client: string;
+  rfqCount: number;
+  avgMarginValue: number;
+  avgMarginLabel: string;
+}
+
+export interface ManagerDashboardAnalyticsModel {
+  metrics: DashboardAnalyticsMetricModel[];
+  byClient: DashboardClientAnalyticsModel[];
+}
+
 export interface IntelligencePortfolioModel {
   completeCount: number;
   partialCount: number;

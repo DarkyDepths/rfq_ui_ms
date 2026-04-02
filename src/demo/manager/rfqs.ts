@@ -101,7 +101,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     updatedAt: "2026-03-28",
     workflowId: "workflow-strategic",
     workflowName: "Strategic Programs Review",
-    status: "won",
+    status: "awarded",
     intelligenceState: "complete",
     priority: "critical",
     nextAction:

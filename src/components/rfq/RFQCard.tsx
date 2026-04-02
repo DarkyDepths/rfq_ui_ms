@@ -25,7 +25,7 @@ export function RFQCard({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {rfq.id}
+                {rfq.rfqCode ?? rfq.id}
               </div>
               <h3 className="mt-1 text-xl font-semibold text-foreground">
                 {rfq.title}
@@ -37,9 +37,11 @@ export function RFQCard({
             </div>
           </div>
 
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-2">
-            {rfq.summaryLine}
-          </p>
+          {rfq.summaryLine ? (
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+              {rfq.summaryLine}
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
             <div className="flex items-center gap-2">
@@ -50,16 +52,20 @@ export function RFQCard({
               <User2 className="h-4 w-4 text-steel-500" />
               <span className="truncate">{rfq.owner}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPinned className="h-4 w-4 text-emerald-500" />
-              <span className="truncate">{rfq.region}</span>
-            </div>
+            {rfq.region ? (
+              <div className="flex items-center gap-2">
+                <MapPinned className="h-4 w-4 text-emerald-500" />
+                <span className="truncate">{rfq.region}</span>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="steel" className="opacity-80 border-transparent">
-              Intel: {rfq.intelligenceState}
-            </Badge>
+            {rfq.intelligenceState ? (
+              <Badge variant="steel" className="opacity-80 border-transparent">
+                Intel: {rfq.intelligenceState}
+              </Badge>
+            ) : null}
             {rfq.tags.map((tag) => (
               <Badge key={`${rfq.id}-${tag}`} variant="default">
                 {tag}
@@ -67,23 +73,36 @@ export function RFQCard({
             ))}
           </div>
 
-          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-            <div className="mb-2 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <span>{rfq.stageLabel}</span>
-              <span className="font-mono">{rfq.stageProgress}%</span>
+          {rfq.stageHistory.length > 0 ? (
+            <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
+              <div className="mb-2 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <span>{rfq.stageLabel}</span>
+                <span className="font-mono">{rfq.stageProgress}%</span>
+              </div>
+              <RFQStageTimeline compact stages={rfq.stageHistory} />
             </div>
-            <RFQStageTimeline compact stages={rfq.stageHistory} />
-          </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-medium text-foreground">{rfq.stageLabel}</div>
+                <div className="font-mono text-sm text-muted-foreground">
+                  {rfq.stageProgress}%
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-            <div>
-              <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Bid Value
+            {rfq.valueLabel ? (
+              <div>
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Bid Value
+                </div>
+                <div className="mt-0.5 font-mono text-base font-medium text-foreground">
+                  {rfq.valueLabel}
+                </div>
               </div>
-              <div className="mt-0.5 font-mono text-base font-medium text-foreground">
-                {rfq.valueLabel}
-              </div>
-            </div>
+            ) : null}
             <div>
               <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Due Date
@@ -93,7 +112,7 @@ export function RFQCard({
               </div>
             </div>
             <div className="max-w-[12rem] text-right text-sm font-medium text-primary">
-              {rfq.nextAction}
+              {rfq.nextAction ?? `Progress ${rfq.stageProgress}%`}
             </div>
           </div>
         </div>

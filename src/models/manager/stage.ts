@@ -20,11 +20,16 @@ export interface StageTemplateModel {
   id: string;
   label: string;
   order: number;
-  summary: string;
-  ownerRole: AppRole | "shared";
+  summary?: string;
+  ownerRole?: AppRole | "shared";
+  assignedTeam?: string;
+  plannedDurationDays?: number;
 }
 
 export interface StageProgressModel extends StageTemplateModel {
   state: StageProgressState;
   timestampLabel?: string;
+  progress?: number;
+  statusLabel?: string;
+  blockerReasonCode?: string;
 }

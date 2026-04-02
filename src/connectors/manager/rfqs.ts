@@ -1,37 +1,130 @@
 import { apiConfig } from "@/config/api";
+import { requestManagerJson } from "@/connectors/manager/base";
 import {
   managerRfqDetailResponses,
   managerRfqListResponse,
 } from "@/demo/manager/rfqs";
-import { requestJson } from "@/lib/http-client";
+import type {
+  ManagerApiCreateRfqInput,
+  ManagerApiRfqAnalytics,
+  ManagerApiRfqDetail,
+  ManagerApiRfqListResponse,
+  ManagerApiRfqStats,
+  ManagerApiUpdateRfqInput,
+} from "@/models/manager/api-rfq";
+import type {
+  ManagerApiStageDetail,
+  ManagerApiStageListResponse,
+} from "@/models/manager/api-stage";
 import type {
   CreateRfqInput,
   DashboardMetricModel,
+  ManagerRfqStatus,
   ManagerRfqDetailResponse,
-  ManagerRfqListResponse,
+  ManagerRfqListItemResponse,
   RfqCardModel,
   RfqDetailModel,
   RfqMutationResult,
   UpdateRfqInput,
 } from "@/models/manager/rfq";
 import {
+  translateManagerAnalytics,
+  translateManagerRfqCard,
+  translateManagerRfqDetail,
+  translateManagerStats,
   translateDashboardMetric,
   translateRfqCard,
   translateRfqDetail,
 } from "@/translators/manager/rfqs";
+import type { ManagerDashboardAnalyticsModel } from "@/models/ui/dashboard";
 import { sleep } from "@/utils/async";
 
-export async function listRfqs(): Promise<RfqCardModel[]> {
-  if (apiConfig.useMockData) {
-    await sleep(apiConfig.demoLatencyMs);
-    return managerRfqListResponse.items.map(translateRfqCard);
+export interface ListRfqsOptions {
+  page?: number;
+  search?: string;
+  size?: number;
+  sort?: "client" | "deadline" | "status";
+  status?: "all" | ManagerRfqStatus;
+}
+
+const liveStatusQueryMap: Partial<Record<ManagerRfqStatus, string>> = {
+  draft: "Draft",
+  in_preparation: "In preparation",
+  submitted: "Submitted",
+  awarded: "Awarded",
+  lost: "Lost",
+  cancelled: "Cancelled",
+};
+
+function applyDemoListFilters(
+  items: ManagerRfqListItemResponse[],
+  options: ListRfqsOptions,
+) {
+  const normalizedSearch = options.search?.trim().toLowerCase() ?? "";
+  const filtered = items.filter((rfq) => {
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      [rfq.id, rfq.title, rfq.client, rfq.owner, rfq.region]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+
+    const matchesStatus =
+      !options.status || options.status === "all" || rfq.status === options.status;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const sorted = [...filtered];
+
+  if (options.sort === "client") {
+    sorted.sort((left, right) => left.client.localeCompare(right.client));
+  } else if (options.sort === "status") {
+    sorted.sort((left, right) => left.status.localeCompare(right.status));
+  } else if (options.sort === "deadline") {
+    sorted.sort((left, right) => left.dueDate.localeCompare(right.dueDate));
   }
 
-  const response = await requestJson<ManagerRfqListResponse>(
-    `${apiConfig.managerBaseUrl}/rfqs`,
+  const page = options.page ?? 1;
+  const size = options.size ?? sorted.length;
+  const start = (page - 1) * size;
+
+  return sorted.slice(start, start + size);
+}
+
+export async function listRfqs(
+  options: ListRfqsOptions = {},
+): Promise<RfqCardModel[]> {
+  if (apiConfig.useMockData) {
+    await sleep(apiConfig.demoLatencyMs);
+    return applyDemoListFilters(managerRfqListResponse.items, options).map(
+      translateRfqCard,
+    );
+  }
+
+  const response = await requestManagerJson<ManagerApiRfqListResponse>(
+    "/rfqs",
+    undefined,
+    {
+      page: options.page ?? 1,
+      search: options.search,
+      size: options.size ?? 20,
+      sort:
+        options.sort === "deadline"
+          ? "deadline"
+          : options.sort === "client"
+            ? "client"
+            : options.sort === "status"
+              ? "status"
+              : undefined,
+      status:
+        options.status && options.status !== "all"
+          ? liveStatusQueryMap[options.status]
+          : undefined,
+    },
   );
 
-  return response.items.map(translateRfqCard);
+  return response.data.map(translateManagerRfqCard);
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetricModel[]> {
@@ -40,11 +133,100 @@ export async function getDashboardMetrics(): Promise<DashboardMetricModel[]> {
     return managerRfqListResponse.metrics.map(translateDashboardMetric);
   }
 
-  const response = await requestJson<ManagerRfqListResponse>(
-    `${apiConfig.managerBaseUrl}/rfqs`,
+  const response = await requestManagerJson<ManagerApiRfqStats>(
+    "/rfqs/stats",
   );
 
-  return response.metrics.map(translateDashboardMetric);
+  return translateManagerStats(response);
+}
+
+export async function getDashboardAnalytics(): Promise<ManagerDashboardAnalyticsModel> {
+  if (apiConfig.useMockData) {
+    await sleep(Math.round(apiConfig.demoLatencyMs * 0.8));
+
+    return {
+      metrics: [
+        {
+          id: "win-rate",
+          label: "Win Rate",
+          value: 31,
+          displayValue: "31%",
+          helper: "Demo analytics baseline for awarded pursuits.",
+          tone: "emerald",
+        },
+        {
+          id: "estimation-accuracy",
+          label: "Estimation Accuracy",
+          value: 74,
+          displayValue: "74%",
+          helper: "Demo estimate-to-award accuracy signal.",
+          tone: "steel",
+        },
+        {
+          id: "avg-margin-submitted",
+          label: "Avg Margin Submitted",
+          value: 19,
+          displayValue: "19%",
+          helper: "Average submitted margin in demo mode.",
+          tone: "gold",
+        },
+        {
+          id: "avg-margin-awarded",
+          label: "Avg Margin Awarded",
+          value: 23,
+          displayValue: "23%",
+          helper: "Average awarded margin in demo mode.",
+          tone: "amber",
+        },
+      ],
+      byClient: [
+        {
+          client: "Albassam Security Systems",
+          rfqCount: 12,
+          avgMarginValue: 22,
+          avgMarginLabel: "22%",
+        },
+        {
+          client: "National Grid Control",
+          rfqCount: 8,
+          avgMarginValue: 18,
+          avgMarginLabel: "18%",
+        },
+        {
+          client: "Regional Air Command",
+          rfqCount: 6,
+          avgMarginValue: 27,
+          avgMarginLabel: "27%",
+        },
+      ],
+    };
+  }
+
+  const response = await requestManagerJson<ManagerApiRfqAnalytics>(
+    "/rfqs/analytics",
+  );
+
+  return translateManagerAnalytics(response);
+}
+
+async function getLiveStageCollections(
+  rfqId: string,
+  currentStageId?: string | null,
+) {
+  const stagesResponse = await requestManagerJson<ManagerApiStageListResponse>(
+    `/rfqs/${rfqId}/stages`,
+  );
+
+  const currentStage = currentStageId
+    ? await requestManagerJson<ManagerApiStageDetail>(
+        `/rfqs/${rfqId}/stages/${currentStageId}`,
+      )
+    : null;
+
+  return {
+    currentStage,
+    stages: stagesResponse.data,
+  };
 }
 
 export async function getRfqDetail(
@@ -56,11 +238,16 @@ export async function getRfqDetail(
     return detail ? translateRfqDetail(detail) : null;
   }
 
-  const response = await requestJson<ManagerRfqDetailResponse>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}`,
+  const response = await requestManagerJson<ManagerApiRfqDetail>(
+    `/rfqs/${rfqId}`,
   );
 
-  return translateRfqDetail(response);
+  const { stages, currentStage } = await getLiveStageCollections(
+    rfqId,
+    response.current_stage_id,
+  );
+
+  return translateManagerRfqDetail(response, stages, currentStage);
 }
 
 export async function createRfqDraft(
@@ -69,16 +256,32 @@ export async function createRfqDraft(
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.75));
     return {
-      id: `DEMO-${input.title.slice(0, 12).replace(/\s+/g, "-").toUpperCase()}`,
+      id: `DEMO-${input.name.slice(0, 12).replace(/\s+/g, "-").toUpperCase()}`,
       message: "Draft RFQ staged in demo mode.",
       status: "demo_staged",
     };
   }
 
-  return requestJson<RfqMutationResult>(`${apiConfig.managerBaseUrl}/rfqs`, {
+  const response = await requestManagerJson<ManagerApiRfqDetail>("/rfqs", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      client: input.client,
+      country: input.country,
+      deadline: input.deadline,
+      description: input.description,
+      industry: input.industry,
+      name: input.name,
+      owner: input.owner,
+      priority: input.priority,
+      workflow_id: input.workflowId,
+    } satisfies ManagerApiCreateRfqInput),
   });
+
+  return {
+    id: response.id,
+    message: "RFQ created through the manager service.",
+    status: "created",
+  };
 }
 
 export async function updateRfqRecord(
@@ -94,11 +297,41 @@ export async function updateRfqRecord(
     };
   }
 
-  return requestJson<RfqMutationResult>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}`,
+  const response = await requestManagerJson<ManagerApiRfqDetail>(
+    `/rfqs/${rfqId}`,
     {
       method: "PATCH",
-      body: JSON.stringify(input),
+      body: JSON.stringify({
+        client: input.client,
+        country: input.country,
+        deadline: input.deadline,
+        description: input.description,
+        industry: input.industry,
+        name: input.name,
+        outcome_reason: input.outcomeReason,
+        owner: input.owner,
+        priority: input.priority,
+        status:
+          input.status === "draft"
+            ? "Draft"
+            : input.status === "in_preparation"
+              ? "In preparation"
+              : input.status === "submitted"
+                ? "Submitted"
+                : input.status === "awarded"
+                  ? "Awarded"
+                  : input.status === "lost"
+                    ? "Lost"
+                    : input.status === "cancelled"
+                      ? "Cancelled"
+                      : undefined,
+      } satisfies ManagerApiUpdateRfqInput),
     },
   );
+
+  return {
+    id: response.id,
+    message: "RFQ updated through the manager service.",
+    status: "updated",
+  };
 }

@@ -4,10 +4,13 @@ import type {
 } from "@/models/manager/stage";
 
 export type ManagerRfqStatus =
+  | "draft"
   | "in_preparation"
   | "under_review"
   | "submitted"
-  | "won"
+  | "awarded"
+  | "lost"
+  | "cancelled"
   | "attention_required";
 
 export type IntelligenceState = "pending" | "partial" | "complete" | "failed";
@@ -109,7 +112,7 @@ export interface StageNoteModel {
   author: string;
   note: string;
   createdLabel: string;
-  tone: "info" | "warning" | "success";
+  tone?: "info" | "warning" | "success";
 }
 
 export interface RfqFileModel {
@@ -117,7 +120,9 @@ export interface RfqFileModel {
   label: string;
   type: string;
   uploadedLabel: string;
-  status: "processed" | "pending" | "rejected";
+  status?: "processed" | "pending" | "rejected";
+  uploadedBy?: string;
+  downloadUrl?: string;
 }
 
 export interface RfqSubtaskModel {
@@ -126,6 +131,7 @@ export interface RfqSubtaskModel {
   owner: string;
   dueLabel: string;
   state: "open" | "in_progress" | "done";
+  progress?: number;
 }
 
 export interface UploadSlotModel {
@@ -139,30 +145,35 @@ export interface UploadSlotModel {
 
 export interface RfqCardModel {
   id: string;
+  rfqCode?: string;
   title: string;
   client: string;
   owner: string;
-  region: string;
-  workflowName: string;
-  valueLabel: string;
+  region?: string;
+  workflowName?: string;
+  valueLabel?: string;
   dueDateValue: string;
   dueLabel: string;
   status: ManagerRfqStatus;
   statusLabel: string;
-  intelligenceState: IntelligenceState;
+  intelligenceState?: IntelligenceState;
   priority: PriorityLevel;
-  nextAction: string;
-  summaryLine: string;
+  nextAction?: string;
+  summaryLine?: string;
   tags: string[];
   stageLabel: string;
   stageProgress: number;
   stageHistory: StageProgressModel[];
+  updatedAtValue?: string;
+  updatedAtLabel?: string;
 }
 
 export interface RfqDetailModel extends RfqCardModel {
-  description: string;
-  procurementLead: string;
-  estimatedSubmissionLabel: string;
+  description?: string;
+  procurementLead?: string;
+  estimatedSubmissionLabel?: string;
+  currentStageId?: string | null;
+  outcomeReason?: string;
   stageNotes: StageNoteModel[];
   recentFiles: RfqFileModel[];
   subtasks: RfqSubtaskModel[];
@@ -170,20 +181,28 @@ export interface RfqDetailModel extends RfqCardModel {
 }
 
 export interface CreateRfqInput {
-  title: string;
+  name: string;
   client: string;
+  owner: string;
   workflowId: string;
-  valueSar: number;
-  dueDate: string;
-  priority: PriorityLevel;
-  summaryLine: string;
+  deadline: string;
+  priority: "normal" | "critical";
+  description?: string;
+  industry?: string;
+  country?: string;
 }
 
 export interface UpdateRfqInput {
+  name?: string;
+  client?: string;
+  industry?: string;
+  country?: string;
+  priority?: "normal" | "critical";
+  deadline?: string;
+  owner?: string;
+  description?: string;
   status?: ManagerRfqStatus;
-  dueDate?: string;
-  nextAction?: string;
-  summaryLine?: string;
+  outcomeReason?: string;
 }
 
 export interface RfqMutationResult {

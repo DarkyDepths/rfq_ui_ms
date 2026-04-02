@@ -15,9 +15,12 @@ export interface ManagerWorkflowResponse {
 export interface WorkflowModel {
   id: string;
   name: string;
-  description: string;
-  recommendedUse: string;
-  turnaroundDays: number;
+  code?: string;
+  description?: string;
+  recommendedUse?: string;
+  turnaroundDays?: number;
   stageCount: number;
+  isActive?: boolean;
+  isDefault?: boolean;
   stages: StageTemplateModel[];
 }
