@@ -1,12 +1,12 @@
 import type { AppRole } from "@/models/ui/role";
 
 export const appConfig = {
-  shortName: "RFQ Intelligence",
+  shortName: "GHI Estimation",
   name: "RFQ Lifecycle Intelligence Platform",
-  owner: "GHI / Albassam Group",
+  owner: "GHI Estimation Department",
   description:
     "Premium industrial platform shell for RFQ lifecycle operations and intelligence artifacts.",
-  platformLine: "RFQ Lifecycle Intelligence Platform — GHI / Albassam Group",
+  platformLine: "RFQ Lifecycle Intelligence Platform — GHI Estimation Department",
   demoBanner: "Demo Mode — Mock Data Active",
   defaultRole: "manager" as AppRole,
   featuredRfqId: "RFQ-2026-0142",

@@ -9,6 +9,7 @@ import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useRfqList } from "@/hooks/use-rfq-list";
 import type { RfqCardModel } from "@/models/manager/rfq";
@@ -27,6 +28,7 @@ const statusOptions: Array<{
 
 export function RFQListScreen() {
   const { role } = useRole();
+  const permissions = getPermissions(role);
   const {
     filteredRfqs,
     loading,
@@ -54,7 +56,7 @@ export function RFQListScreen() {
               Search, scan, and open RFQs through the same boundary that will later connect to manager and intelligence services.
             </p>
           </div>
-          {role === "manager" ? (
+          {permissions.canCreateRfq ? (
             <Button asChild size="lg" variant="default">
               <Link href="/rfqs/new">
                 <PlusSquare className="h-4 w-4" />

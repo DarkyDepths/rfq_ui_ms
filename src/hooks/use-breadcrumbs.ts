@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { BreadcrumbItem } from "@/models/ui/dashboard";
 
 const LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
   overview: "Overview",
   rfqs: "RFQ Queue",
   new: "Create RFQ",

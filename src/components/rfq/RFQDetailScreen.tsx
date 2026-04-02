@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ClipboardCheck,
@@ -39,6 +39,8 @@ const tabConfig: Array<{
 export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
   const { role } = useRole();
   const permissions = getPermissions(role);
+  const visibleTabValues = permissions.detailTabs as readonly DetailTab[];
+  const visibleTabs = tabConfig.filter((tab) => visibleTabValues.includes(tab.value));
   const {
     artifacts,
     artifactsLoading,
@@ -52,6 +54,13 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
   } = useRfqDetail(rfqId);
   const [activeTab, setActiveTab] = useState<DetailTab>("operational");
   const [reprocessMessage, setReprocessMessage] = useState("");
+
+  useEffect(() => {
+    if (!visibleTabValues.includes(activeTab)) {
+      const nextTab = tabConfig.find((tab) => visibleTabValues.includes(tab.value));
+      setActiveTab(nextTab?.value ?? "intelligence");
+    }
+  }, [activeTab, visibleTabValues]);
 
   const handleReprocess = async (kind: ArtifactKind) => {
     if (!permissions.canReprocessArtifacts) return;
@@ -146,7 +155,7 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
 
       {/* ─── Tab Navigation ─── */}
       <div className="flex gap-1.5 rounded-xl border border-border bg-muted/40 p-1 dark:bg-white/[0.02]">
-        {tabConfig.map((tab) => {
+        {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.value;
           const Icon = tab.icon;
           return (
@@ -330,13 +339,27 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
 
                 {/* Role controls */}
                 <div className="surface-panel p-5">
-                  <Badge variant={role === "manager" ? "steel" : "gold"}>
-                    {role === "manager" ? "Manager Controls" : "Worker Focus"}
+                  <Badge
+                    variant={
+                      role === "manager"
+                        ? "steel"
+                        : role === "executive"
+                          ? "gold"
+                          : "pending"
+                    }
+                  >
+                    {role === "manager"
+                      ? "Manager Controls"
+                      : role === "executive"
+                        ? "Executive Context"
+                        : "Estimator Focus"}
                   </Badge>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                     {role === "manager"
                       ? "Managers can approve lifecycle transitions, refresh artifacts, and coordinate stage notes through the manager microservice."
-                      : "Workers see operational next actions and upload targets. Control-plane actions remain manager-owned."}
+                      : role === "executive"
+                        ? "Executives consume intelligence posture for decision support while operational actions remain with the delivery team."
+                        : "Estimators see operational next actions and upload targets while control-plane actions remain manager-owned."}
                   </p>
                 </div>
               </div>

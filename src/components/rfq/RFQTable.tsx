@@ -35,7 +35,7 @@ function sortItems(
         return left.statusLabel.localeCompare(right.statusLabel) * factor;
       case "due":
       default:
-        return left.dueLabel.localeCompare(right.dueLabel) * factor;
+        return left.dueDateValue.localeCompare(right.dueDateValue) * factor;
     }
   });
 }

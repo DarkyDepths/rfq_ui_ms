@@ -11,6 +11,24 @@ import { cn } from "@/lib/utils";
 
 type UploadState = "ready" | "processing" | "missing" | "failed";
 
+function buildDemoUploadFileName(title: string, fileName?: string) {
+  if (fileName) {
+    const extensionIndex = fileName.lastIndexOf(".");
+    if (extensionIndex > 0) {
+      const stem = fileName.slice(0, extensionIndex);
+      const extension = fileName.slice(extensionIndex);
+      return `${stem}_refresh${extension}`;
+    }
+    return `${fileName}_refresh`;
+  }
+
+  if (title.toLowerCase().includes("workbook")) {
+    return "demo_pricing_refresh.xlsx";
+  }
+
+  return "demo_package_refresh.zip";
+}
+
 export function UploadZone({
   title,
   description,
@@ -35,7 +53,7 @@ export function UploadZone({
 
   const triggerUpload = () => {
     setStatus("processing");
-    setCurrentFileName("demo_refresh_upload.zip");
+    setCurrentFileName(buildDemoUploadFileName(title, fileName));
 
     window.setTimeout(() => {
       setStatus("ready");
