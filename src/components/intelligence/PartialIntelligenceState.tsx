@@ -1,53 +1,65 @@
-import { AlertTriangle, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock3,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { ProcessingState } from "@/models/intelligence/snapshot";
+import type { IntelligenceAvailabilityState } from "@/models/intelligence/snapshot";
+import { intelligenceAvailabilityMeta } from "@/utils/status";
 
 const stateMeta: Record<
-  ProcessingState,
+  IntelligenceAvailabilityState,
   {
-    icon: typeof Sparkles;
-    badge: "steel" | "gold" | "emerald" | "rose" | "pending";
-    title: string;
     description: string;
+    icon: typeof Sparkles;
+    title: string;
   }
 > = {
+  not_available_yet: {
+    icon: Clock3,
+    title: "Not Available Yet",
+    description: "The intelligence service has not produced this read model yet.",
+  },
   pending: {
     icon: LoaderCircle,
-    badge: "pending",
     title: "Awaiting Processing",
-    description: "Intelligence artifacts have not yet been generated for this RFQ.",
+    description: "Intelligence artifacts are still being generated for this RFQ.",
   },
   partial: {
     icon: Sparkles,
-    badge: "gold",
     title: "Partial Intelligence",
-    description: "Some artifacts are available. Processing continues for remaining items.",
+    description: "Some intelligence artifacts are available, while others are still incomplete.",
   },
-  complete: {
+  preliminary: {
     icon: Sparkles,
-    badge: "emerald",
-    title: "Complete Intelligence",
-    description: "All intelligence artifacts have been generated and aligned.",
+    title: "Preliminary Intelligence",
+    description: "Initial intelligence is available, but it is still a supportive or stub-level slice.",
   },
   failed: {
     icon: AlertTriangle,
-    badge: "rose",
     title: "Processing Failed",
-    description: "One or more intelligence stages failed and require intervention.",
+    description: "One or more intelligence stages failed and need follow-up.",
+  },
+  available: {
+    icon: Sparkles,
+    title: "Available Intelligence",
+    description: "The intelligence service returned an available artifact slice for this RFQ.",
   },
 };
 
 export function PartialIntelligenceState({
+  actions,
   state,
   summary,
-  actions,
 }: {
-  state: ProcessingState;
-  summary: string;
   actions: string[];
+  state: IntelligenceAvailabilityState;
+  summary: string;
 }) {
   const meta = stateMeta[state];
+  const badgeMeta = intelligenceAvailabilityMeta[state];
   const Icon = meta.icon;
 
   return (
@@ -57,9 +69,13 @@ export function PartialIntelligenceState({
           <Icon
             className={`h-5 w-5 ${
               state === "pending" ? "animate-spin text-muted-foreground" : ""
-            } ${state === "complete" ? "text-emerald-500" : ""} ${
+            } ${state === "available" ? "text-emerald-500" : ""} ${
               state === "failed" ? "text-rose-500" : ""
-            } ${state === "partial" ? "text-amber-500 dark:text-gold-300" : ""}`}
+            } ${
+              state === "partial" || state === "preliminary"
+                ? "text-amber-500 dark:text-gold-300"
+                : ""
+            } ${state === "not_available_yet" ? "text-muted-foreground" : ""}`}
           />
         </div>
         <div>
@@ -67,7 +83,7 @@ export function PartialIntelligenceState({
             <h3 className="text-lg font-semibold text-foreground">
               {meta.title}
             </h3>
-            <Badge variant={meta.badge}>{state}</Badge>
+            <Badge variant={badgeMeta.tone}>{badgeMeta.label}</Badge>
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {meta.description}

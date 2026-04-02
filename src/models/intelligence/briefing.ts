@@ -1,4 +1,7 @@
-import type { ProcessingState } from "@/models/intelligence/snapshot";
+import type {
+  IntelligenceAvailabilityState,
+  ProcessingState,
+} from "@/models/intelligence/snapshot";
 
 export interface BriefingResponse {
   rfqId: string;
@@ -13,12 +16,20 @@ export interface BriefingResponse {
 
 export interface BriefingArtifactModel {
   kind: "briefing";
-  title: string;
   status: ProcessingState;
-  version: string;
+  availability: IntelligenceAvailabilityState;
+  title: string;
+  version?: string;
   updatedLabel: string;
+  updatedAtValue?: string;
   summary: string;
   keySignals: string[];
   openQuestions: string[];
-  recommendation: string;
+  recommendedActions: string[];
+  limitations: string[];
+  sectionAvailability: Array<{
+    label: string;
+    value: string;
+  }>;
+  preliminary: boolean;
 }

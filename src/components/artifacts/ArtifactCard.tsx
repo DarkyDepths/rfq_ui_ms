@@ -1,12 +1,11 @@
 "use client";
 
-import { FileStack, RotateCw, Sparkles } from "lucide-react";
+import { FileStack, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { ArtifactModel } from "@/models/intelligence/artifacts";
-import { intelligenceStatusMeta } from "@/utils/status";
+import { artifactKindLabel, intelligenceStatusMeta } from "@/utils/status";
 import { cn } from "@/lib/utils";
 
 const accentMap: Record<ArtifactModel["accent"], string> = {
@@ -18,21 +17,17 @@ const accentMap: Record<ArtifactModel["accent"], string> = {
 
 export function ArtifactCard({
   artifact,
-  allowReprocess,
-  onReprocess,
 }: {
   artifact: ArtifactModel;
-  allowReprocess?: boolean;
-  onReprocess?: (kind: ArtifactModel["kind"]) => void;
 }) {
   const statusMeta = intelligenceStatusMeta[artifact.status];
 
   return (
     <motion.div
       animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="surface-panel surface-panel-hover p-6"
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
       transition={{ duration: 0.38 }}
-      className="surface-panel surface-panel-hover p-6"
     >
       <div
         className={cn(
@@ -51,7 +46,7 @@ export function ArtifactCard({
           </div>
           <div>
             <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {artifact.kind.replaceAll("_", " ")}
+              {artifactKindLabel[artifact.kind]}
             </div>
             <h3 className="mt-1 text-lg font-semibold text-foreground">
               {artifact.title}
@@ -66,26 +61,20 @@ export function ArtifactCard({
       </p>
 
       <div className="relative mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <Badge variant="default" className="font-mono text-[0.7rem] bg-muted/50">{artifact.version}</Badge>
-        <div className="h-3 w-px bg-border" />
-        <span className="text-[0.75rem] text-muted-foreground">Updated {artifact.updatedLabel}</span>
-        <div className="h-3 w-px bg-border" />
-        <span className="text-[0.75rem] text-muted-foreground">Owned by {artifact.owner}</span>
+        <Badge className="bg-muted/50 font-mono text-[0.7rem]" variant="default">
+          {artifact.version}
+        </Badge>
+        {artifact.isCurrent === true ? <Badge variant="emerald">Current</Badge> : null}
+        {artifact.isCurrent === false ? <Badge variant="steel">Historical</Badge> : null}
+        <span className="text-[0.75rem] text-muted-foreground">
+          Updated {artifact.updatedLabel}
+        </span>
+        {artifact.schemaVersion ? (
+          <span className="text-[0.75rem] text-muted-foreground">
+            Schema {artifact.schemaVersion}
+          </span>
+        ) : null}
       </div>
-
-      {allowReprocess ? (
-        <div className="relative mt-5">
-          <Button
-            onClick={() => onReprocess?.(artifact.kind)}
-            size="sm"
-            variant="secondary"
-            className="w-full sm:w-auto"
-          >
-            <RotateCw className="h-3.5 w-3.5 mr-2" />
-            Reprocess Artifact
-          </Button>
-        </div>
-      ) : null}
     </motion.div>
   );
 }

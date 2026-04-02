@@ -1,11 +1,18 @@
 import { apiConfig } from "@/config/api";
 import { briefingResponses } from "@/demo/intelligence/briefing";
-import { requestJson } from "@/lib/http-client";
+import { requestIntelligenceJson } from "@/connectors/intelligence/base";
+import { HttpError } from "@/lib/http-client";
+import type {
+  IntelligenceArtifactEnvelope,
+  IntelligenceBriefingContent,
+} from "@/models/intelligence/api";
 import type {
   BriefingArtifactModel,
-  BriefingResponse,
 } from "@/models/intelligence/briefing";
-import { translateBriefing } from "@/translators/intelligence/briefing";
+import {
+  translateBriefing,
+  translateLiveBriefing,
+} from "@/translators/intelligence/briefing";
 import { sleep } from "@/utils/async";
 
 export async function getBriefingArtifact(
@@ -17,9 +24,17 @@ export async function getBriefingArtifact(
     return response ? translateBriefing(response) : null;
   }
 
-  const response = await requestJson<BriefingResponse>(
-    `${apiConfig.intelligenceBaseUrl}/briefing/${rfqId}`,
-  );
+  try {
+    const response = await requestIntelligenceJson<
+      IntelligenceArtifactEnvelope<IntelligenceBriefingContent>
+    >(`/rfqs/${rfqId}/briefing`);
 
-  return translateBriefing(response);
+    return translateLiveBriefing(response);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }

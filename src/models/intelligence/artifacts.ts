@@ -1,7 +1,12 @@
 import type { ProcessingState } from "@/models/intelligence/snapshot";
 
 export type ArtifactKind =
+  | "analytical_record"
   | "briefing"
+  | "cost_breakdown"
+  | "intake_profile"
+  | "other"
+  | "parser_report"
   | "workbook_profile"
   | "workbook_review"
   | "snapshot";
@@ -27,14 +32,18 @@ export interface ArtifactModel {
   version: string;
   status: ArtifactStatus;
   updatedLabel: string;
+  updatedAtValue?: string;
   summary: string;
-  owner: string;
+  schemaVersion?: string;
+  isCurrent?: boolean;
   accent: "steel" | "gold" | "emerald" | "rose";
 }
 
+export type ReprocessKind = "intake" | "workbook";
+
 export interface ReprocessResult {
-  rfqId: string;
-  kind: ArtifactKind;
+  kind: ReprocessKind;
   accepted: boolean;
   message: string;
+  status: string;
 }

@@ -3,14 +3,20 @@ import {
   workbookProfileResponses,
   workbookReviewResponses,
 } from "@/demo/intelligence/workbook";
-import { requestJson } from "@/lib/http-client";
+import { requestIntelligenceJson } from "@/connectors/intelligence/base";
+import { HttpError } from "@/lib/http-client";
+import type {
+  IntelligenceArtifactEnvelope,
+  IntelligenceWorkbookProfileContent,
+  IntelligenceWorkbookReviewContent,
+} from "@/models/intelligence/api";
 import type {
   WorkbookProfileModel,
-  WorkbookProfileResponse,
   WorkbookReviewModel,
-  WorkbookReviewResponse,
 } from "@/models/intelligence/workbook";
 import {
+  translateLiveWorkbookProfile,
+  translateLiveWorkbookReview,
   translateWorkbookProfile,
   translateWorkbookReview,
 } from "@/translators/intelligence/workbook";
@@ -25,11 +31,19 @@ export async function getWorkbookProfile(
     return response ? translateWorkbookProfile(response) : null;
   }
 
-  const response = await requestJson<WorkbookProfileResponse>(
-    `${apiConfig.intelligenceBaseUrl}/workbook/${rfqId}/profile`,
-  );
+  try {
+    const response = await requestIntelligenceJson<
+      IntelligenceArtifactEnvelope<IntelligenceWorkbookProfileContent>
+    >(`/rfqs/${rfqId}/workbook-profile`);
 
-  return translateWorkbookProfile(response);
+    return translateLiveWorkbookProfile(response);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getWorkbookReview(
@@ -41,9 +55,17 @@ export async function getWorkbookReview(
     return response ? translateWorkbookReview(response) : null;
   }
 
-  const response = await requestJson<WorkbookReviewResponse>(
-    `${apiConfig.intelligenceBaseUrl}/workbook/${rfqId}/review`,
-  );
+  try {
+    const response = await requestIntelligenceJson<
+      IntelligenceArtifactEnvelope<IntelligenceWorkbookReviewContent>
+    >(`/rfqs/${rfqId}/workbook-review`);
 
-  return translateWorkbookReview(response);
+    return translateLiveWorkbookReview(response);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }

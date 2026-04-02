@@ -20,11 +20,38 @@ export interface StageTemplateModel {
   id: string;
   label: string;
   order: number;
-  summary: string;
-  ownerRole: AppRole | "shared";
+  summary?: string;
+  ownerRole?: AppRole | "shared";
+  assignedTeam?: string;
+  plannedDurationDays?: number;
 }
 
 export interface StageProgressModel extends StageTemplateModel {
   state: StageProgressState;
   timestampLabel?: string;
+  progress?: number;
+  statusLabel?: string;
+  blockerReasonCode?: string;
+}
+
+export interface StageWorkspaceModel extends StageProgressModel {
+  capturedData: Record<string, string>;
+  mandatoryFields: string[];
+  blockerStatus?: "Blocked" | "Resolved";
+  plannedStartValue?: string;
+  plannedStartLabel?: string;
+  plannedEndValue?: string;
+  plannedEndLabel?: string;
+  actualStartValue?: string;
+  actualStartLabel?: string;
+  actualEndValue?: string;
+  actualEndLabel?: string;
+}
+
+export interface StageUpdateInput {
+  progress?: number;
+  assignedTeam?: string;
+  capturedData?: Record<string, string>;
+  blockerStatus?: "Blocked" | "Resolved";
+  blockerReasonCode?: string;
 }

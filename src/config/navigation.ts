@@ -1,5 +1,9 @@
 import type { AppRole } from "@/models/ui/role";
 
+const showFeaturedDetail =
+  process.env.NEXT_PUBLIC_USE_MOCK_DATA === undefined ||
+  process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+
 export type NavigationIcon =
   | "layout-dashboard"
   | "bar-chart"
@@ -52,12 +56,16 @@ export const primaryNavigation: NavigationItem[] = [
     match: "exact",
     highlight: true,
   },
-  {
-    title: "Featured Detail",
-    href: "/rfqs/RFQ-2026-0142",
-    description: "Fast path to the strongest complete intelligence demo state.",
-    icon: "radar",
-    roles: ["manager", "estimator"],
-    match: "exact",
-  },
+  ...(showFeaturedDetail
+    ? [
+        {
+          title: "Featured Detail",
+          href: "/rfqs/RFQ-2026-0142",
+          description: "Fast path to the strongest complete intelligence demo state.",
+          icon: "radar" as const,
+          roles: ["manager", "estimator"],
+          match: "exact" as const,
+        } satisfies NavigationItem,
+      ]
+    : []),
 ];

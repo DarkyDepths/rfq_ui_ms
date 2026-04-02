@@ -107,7 +107,8 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
                 <div>
                   <div className="font-semibold text-foreground">{item.title}</div>
                   <div className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
-                    {item.id} • {item.valueLabel}
+                    {item.rfqCode ?? item.id}
+                    {item.valueLabel ? ` • ${item.valueLabel}` : ""}
                   </div>
                 </div>
               </TableCell>
@@ -115,14 +116,18 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
               <TableCell className="py-4">
                 <div className="flex flex-col gap-1.5 items-start">
                   <RFQStatusChip status={item.status} />
-                  <div className="text-[0.68rem] font-medium text-muted-foreground">
-                    Intel: {item.intelligenceState}
-                  </div>
+                  {item.intelligenceState ? (
+                    <div className="text-[0.68rem] font-medium text-muted-foreground">
+                      Intel: {item.intelligenceState}
+                    </div>
+                  ) : null}
                 </div>
               </TableCell>
               <TableCell className="py-4">
                 <div className="text-sm font-medium text-foreground">{item.stageLabel}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{item.nextAction}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {item.nextAction ?? `Progress ${item.stageProgress}%`}
+                </div>
               </TableCell>
               <TableCell className="py-4 font-mono text-sm">{item.dueLabel}</TableCell>
               <TableCell className="py-4 text-right">

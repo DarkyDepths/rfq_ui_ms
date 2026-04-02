@@ -4,23 +4,34 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, PlusSquare, Radar } from "lucide-react";
 
+import { EmptyState } from "@/components/common/EmptyState";
 import { KPICard } from "@/components/common/KPICard";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { apiConfig } from "@/config/api";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useOverviewData } from "@/hooks/use-overview-data";
 
 export function RFQOverviewScreen() {
   const { role } = useRole();
-  const { loading, metrics, portfolio, rfqs } = useOverviewData();
+  const { error, loading, metrics, rfqs } = useOverviewData();
   const permissions = getPermissions(role);
 
   const displayRfqs = permissions.canViewAllRfqs ? rfqs : rfqs.slice(0, 3);
   const featuredCards = displayRfqs.slice(0, 3);
+
+  if (error) {
+    return (
+      <EmptyState
+        description={error}
+        title="Overview unavailable"
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -43,12 +54,21 @@ export function RFQOverviewScreen() {
               </Link>
             </Button>
           ) : null}
-          <Button asChild size="lg" variant="secondary">
-            <Link href="/rfqs/RFQ-2026-0142">
-              <Radar className="h-4 w-4" />
-              Featured RFQ
-            </Link>
-          </Button>
+          {apiConfig.useMockData ? (
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/rfqs/RFQ-2026-0142">
+                <Radar className="h-4 w-4" />
+                Featured RFQ
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild size="lg" variant="secondary">
+              <Link href="/rfqs">
+                <Radar className="h-4 w-4" />
+                Open Queue
+              </Link>
+            </Button>
+          )}
         </div>
       </section>
 

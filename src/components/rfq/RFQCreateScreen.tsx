@@ -4,20 +4,19 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, ClipboardPlus, Sparkles } from "lucide-react";
 
-import { UploadZone } from "@/components/common/UploadZone";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { apiConfig } from "@/config/api";
 import { createRfqDraft } from "@/connectors/manager/rfqs";
 import { listWorkflows } from "@/connectors/manager/workflows";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
-import type { PriorityLevel } from "@/models/manager/rfq";
 import type { WorkflowModel } from "@/models/manager/workflow";
 
-const priorities: PriorityLevel[] = ["normal", "high", "critical"];
+const priorities = ["normal", "critical"] as const;
 
 export function RFQCreateScreen() {
   const { role } = useRole();
@@ -27,12 +26,16 @@ export function RFQCreateScreen() {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
   const [title, setTitle] = useState("Structured Power Redundancy Upgrade");
   const [client, setClient] = useState("GHI Strategic Systems");
+  const [owner, setOwner] = useState("Proposals Team A");
   const [valueSar, setValueSar] = useState("12400000");
   const [dueDate, setDueDate] = useState("2026-04-22");
-  const [priority, setPriority] = useState<PriorityLevel>("high");
-  const [summaryLine, setSummaryLine] = useState(
+  const [priority, setPriority] = useState<(typeof priorities)[number]>("critical");
+  const [description, setDescription] = useState(
     "High-value package requiring synchronized operational control and intelligence visibility from intake onward.",
   );
+  const [industry, setIndustry] = useState("Industrial Systems");
+  const [country, setCountry] = useState("Saudi Arabia");
+  const [errorMessage, setErrorMessage] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -40,15 +43,20 @@ export function RFQCreateScreen() {
     let active = true;
 
     async function load() {
-      const workflowOptions = await listWorkflows();
+      try {
+        const workflowOptions = await listWorkflows();
 
-      if (!active) {
-        return;
+        if (!active) {
+          return;
+        }
+
+        setWorkflows(workflowOptions);
+        setSelectedWorkflowId(workflowOptions[0]?.id ?? "");
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-
-      setWorkflows(workflowOptions);
-      setSelectedWorkflowId(workflowOptions[0]?.id ?? "");
-      setLoading(false);
     }
 
     load();
@@ -69,18 +77,31 @@ export function RFQCreateScreen() {
       return;
     }
 
+    setErrorMessage("");
+    setSaveMessage("");
     setSaving(true);
-    const result = await createRfqDraft({
-      title,
-      client,
-      workflowId: selectedWorkflow.id,
-      valueSar: Number(valueSar),
-      dueDate,
-      priority,
-      summaryLine,
-    });
-    setSaving(false);
-    setSaveMessage(result.message);
+
+    try {
+      const result = await createRfqDraft({
+        client,
+        country,
+        deadline: dueDate,
+        description,
+        industry,
+        name: title,
+        owner,
+        priority,
+        workflowId: selectedWorkflow.id,
+      });
+
+      setSaveMessage(result.message);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "RFQ creation failed.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -103,7 +124,7 @@ export function RFQCreateScreen() {
           Stage a new RFQ draft through the manager path
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          The frontend keeps creation on the manager boundary and prepares the intelligence service for downstream artifact generation without embedding backend workflow logic.
+          The frontend keeps creation on the manager boundary and does not invent unsupported live fields during submission.
         </p>
 
         <AnimatePresence>
@@ -117,6 +138,21 @@ export function RFQCreateScreen() {
               <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-300">
                 <CheckCircle2 className="h-4 w-4" />
                 {saveMessage}
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {errorMessage ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4"
+              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: 10 }}
+            >
+              <div className="text-sm font-medium text-rose-600 dark:text-rose-300">
+                {errorMessage}
               </div>
             </motion.div>
           ) : null}
@@ -150,12 +186,11 @@ export function RFQCreateScreen() {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="rfq-value">Estimated Value (SAR)</Label>
+              <Label htmlFor="rfq-owner">Owner</Label>
               <Input
-                id="rfq-value"
-                onChange={(event) => setValueSar(event.target.value)}
-                type="number"
-                value={valueSar}
+                id="rfq-owner"
+                onChange={(event) => setOwner(event.target.value)}
+                value={owner}
               />
             </div>
             <div className="space-y-2">
@@ -169,16 +204,47 @@ export function RFQCreateScreen() {
             </div>
           </div>
 
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="rfq-industry">Industry</Label>
+              <Input
+                id="rfq-industry"
+                onChange={(event) => setIndustry(event.target.value)}
+                value={industry}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rfq-country">Country</Label>
+              <Input
+                id="rfq-country"
+                onChange={(event) => setCountry(event.target.value)}
+                value={country}
+              />
+            </div>
+          </div>
+
+          {apiConfig.useMockData ? (
+            <div className="space-y-2">
+              <Label htmlFor="rfq-value">Demo Estimated Value (SAR)</Label>
+              <Input
+                id="rfq-value"
+                onChange={(event) => setValueSar(event.target.value)}
+                type="number"
+                value={valueSar}
+              />
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label>Priority Level</Label>
             <div className="flex flex-wrap gap-2">
               {priorities.map((option) => (
                 <Button
                   key={option}
+                  className="capitalize"
                   onClick={() => setPriority(option)}
                   type="button"
                   variant={priority === option ? "default" : "secondary"}
-                  className="capitalize"
                 >
                   {option}
                 </Button>
@@ -187,17 +253,17 @@ export function RFQCreateScreen() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rfq-summary">Operational Summary</Label>
+            <Label htmlFor="rfq-summary">Description</Label>
             <Textarea
               id="rfq-summary"
-              onChange={(event) => setSummaryLine(event.target.value)}
-              value={summaryLine}
-              className="resize-none h-24"
+              className="h-24 resize-none"
+              onChange={(event) => setDescription(event.target.value)}
+              value={description}
             />
           </div>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-border">
+        <div className="mt-8 flex flex-wrap gap-3 border-t border-border pt-6">
           <Button disabled={saving || !permissions.canCreateRfq} size="lg" type="submit">
             {saving ? "Staging Draft..." : "Stage Draft RFQ"}
           </Button>
@@ -234,16 +300,22 @@ export function RFQCreateScreen() {
                       {workflow.name}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {workflow.description}
+                      {workflow.description ?? "Manager workflow definition."}
                     </div>
                   </div>
                   <div className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-mono text-[0.65rem] text-muted-foreground dark:bg-white/[0.04]">
-                    {workflow.turnaroundDays}d • {workflow.stageCount}s
+                    {workflow.turnaroundDays ? `${workflow.turnaroundDays}d • ` : ""}
+                    {workflow.stageCount}s
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Use case</span>: {workflow.recommendedUse}
-                </div>
+                {workflow.recommendedUse || workflow.code ? (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {workflow.recommendedUse ? "Use case" : "Code"}
+                    </span>
+                    : {workflow.recommendedUse ?? workflow.code}
+                  </div>
+                ) : null}
               </button>
             ))}
           </div>
@@ -254,22 +326,21 @@ export function RFQCreateScreen() {
             Stage preview
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            The workflow dictates lifecycle visibility and intelligence inflection points.
+            The workflow dictates lifecycle visibility and operational progression through the manager service.
           </p>
           <div className="mt-5 space-y-3 border-l border-border pl-4">
             {selectedWorkflow?.stages.map((stage) => (
-              <div
-                key={stage.id}
-                className="relative"
-              >
+              <div key={stage.id} className="relative">
                 <div className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-border" />
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm font-medium text-foreground">{stage.label}</div>
                   <div className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
-                    {stage.ownerRole}
+                    {stage.assignedTeam ?? stage.ownerRole ?? "Unassigned"}
                   </div>
                 </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{stage.summary}</div>
+                {stage.summary ? (
+                  <div className="mt-0.5 text-xs text-muted-foreground">{stage.summary}</div>
+                ) : null}
               </div>
             ))}
           </div>

@@ -1,19 +1,46 @@
 import { apiConfig } from "@/config/api";
+import {
+  requestManagerJson,
+  type ManagerRequestOptions,
+} from "@/connectors/manager/base";
 import { managerRfqDetailResponses } from "@/demo/manager/rfqs";
 import { managerWorkflowResponses } from "@/demo/manager/workflows";
-import { requestJson } from "@/lib/http-client";
+import type {
+  ManagerApiStageDetail,
+  ManagerApiStageListResponse,
+  ManagerApiStageNoteInput,
+  ManagerApiStageUpdateInput,
+  ManagerApiSubtaskCreateInput,
+  ManagerApiSubtaskUpdateInput,
+} from "@/models/manager/api-stage";
 import type {
   RfqFileModel,
   RfqSubtaskModel,
   StageNoteModel,
+  SubtaskCreateInput,
+  SubtaskUpdateInput,
 } from "@/models/manager/rfq";
 import type {
-  ManagerStageStatusResponse,
   StageProgressModel,
   StageTemplateModel,
+  StageUpdateInput,
+  StageWorkspaceModel,
 } from "@/models/manager/stage";
-import { translateStageProgress, translateStageTemplate } from "@/translators/manager/stages";
+import {
+  translateManagerStageDetailCollections,
+  translateManagerStageSummary,
+  translateManagerStageWorkspace,
+  translateManagerWorkflowStageTemplate,
+  translateStageProgress,
+  translateStageTemplate,
+  translateStageUpdateInput,
+} from "@/translators/manager/stages";
 import { sleep } from "@/utils/async";
+
+export interface StageActionOptions {
+  actorTeam?: string;
+  actorUserName?: string;
+}
 
 export async function getWorkflowStages(
   workflowId: string,
@@ -26,11 +53,17 @@ export async function getWorkflowStages(
     return workflow ? workflow.stages.map(translateStageTemplate) : [];
   }
 
-  const response = await requestJson<ManagerStageStatusResponse[]>(
-    `${apiConfig.managerBaseUrl}/workflows/${workflowId}/stages`,
-  );
+  const response = await requestManagerJson<{
+    stages: {
+      id: string;
+      name: string;
+      order: number;
+      default_team?: string | null;
+      planned_duration_days: number;
+    }[];
+  }>(`/workflows/${workflowId}`);
 
-  return response.map(translateStageTemplate);
+  return response.stages.map(translateManagerWorkflowStageTemplate);
 }
 
 export async function getRfqStages(rfqId: string): Promise<StageProgressModel[]> {
@@ -41,14 +74,216 @@ export async function getRfqStages(rfqId: string): Promise<StageProgressModel[]>
     );
   }
 
-  const response = await requestJson<ManagerStageStatusResponse[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stages`,
+  const response = await requestManagerJson<ManagerApiStageListResponse>(
+    `/rfqs/${rfqId}/stages`,
   );
 
-  return response.map(translateStageProgress);
+  return response.data.map(translateManagerStageSummary);
 }
 
-export async function listStageNotes(rfqId: string): Promise<StageNoteModel[]> {
+export async function getStageDetail(
+  rfqId: string,
+  stageId?: string | null,
+): Promise<ManagerApiStageDetail | null> {
+  if (!stageId) {
+    return null;
+  }
+
+  if (apiConfig.useMockData) {
+    await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
+    return null;
+  }
+
+  return requestManagerJson<ManagerApiStageDetail>(
+    `/rfqs/${rfqId}/stages/${stageId}`,
+  );
+}
+
+export async function getStageWorkspace(
+  rfqId: string,
+  stageId?: string | null,
+): Promise<StageWorkspaceModel | null> {
+  if (apiConfig.useMockData || !stageId) {
+    return null;
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return detail ? translateManagerStageWorkspace(detail) : null;
+}
+
+function buildActionOptions(
+  options?: StageActionOptions,
+): Pick<ManagerRequestOptions, "actorTeam" | "actorUserName"> {
+  return {
+    actorTeam: options?.actorTeam,
+    actorUserName: options?.actorUserName,
+  };
+}
+
+export async function updateStage(
+  rfqId: string,
+  stageId: string,
+  input: StageUpdateInput,
+  options?: StageActionOptions,
+): Promise<StageWorkspaceModel> {
+  const response = await requestManagerJson<ManagerApiStageDetail>(
+    `/rfqs/${rfqId}/stages/${stageId}`,
+    {
+      ...buildActionOptions(options),
+      method: "PATCH",
+      body: JSON.stringify(
+        translateStageUpdateInput(input) satisfies ManagerApiStageUpdateInput,
+      ),
+    },
+  );
+
+  return translateManagerStageWorkspace(response);
+}
+
+export async function advanceStage(
+  rfqId: string,
+  stageId: string,
+  options?: StageActionOptions,
+): Promise<StageWorkspaceModel> {
+  const response = await requestManagerJson<ManagerApiStageDetail>(
+    `/rfqs/${rfqId}/stages/${stageId}/advance`,
+    {
+      ...buildActionOptions(options),
+      method: "POST",
+    },
+  );
+
+  return translateManagerStageWorkspace(response);
+}
+
+export async function addStageNote(
+  rfqId: string,
+  stageId: string,
+  text: string,
+  options?: StageActionOptions,
+): Promise<StageNoteModel> {
+  const response = await requestManagerJson<{
+    id: string;
+    user_name: string;
+    text: string;
+    created_at: string;
+  }>(
+    `/rfqs/${rfqId}/stages/${stageId}/notes`,
+    {
+      ...buildActionOptions(options),
+      method: "POST",
+      body: JSON.stringify({ text } satisfies ManagerApiStageNoteInput),
+    },
+  );
+
+  return {
+    id: response.id,
+    author: response.user_name,
+    note: response.text,
+    createdLabel: response.created_at,
+  };
+}
+
+export async function uploadStageFile(
+  rfqId: string,
+  stageId: string,
+  file: File,
+  type: string,
+  options?: StageActionOptions,
+): Promise<RfqFileModel> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", type);
+
+  const response = await requestManagerJson<ManagerApiStageDetail["files"][number]>(
+    `/rfqs/${rfqId}/stages/${stageId}/files`,
+    {
+      ...buildActionOptions(options),
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  return translateManagerStageDetailCollections({
+    id: stageId,
+    name: "",
+    order: 0,
+    status: "In Progress",
+    progress: 0,
+    notes: [],
+    subtasks: [],
+    files: [response],
+  } as ManagerApiStageDetail).files[0];
+}
+
+export async function deleteStageFile(fileId: string): Promise<void> {
+  await requestManagerJson<void>(`/files/${fileId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function createSubtask(
+  rfqId: string,
+  stageId: string,
+  input: SubtaskCreateInput,
+  options?: StageActionOptions,
+): Promise<void> {
+  await requestManagerJson(
+    `/rfqs/${rfqId}/stages/${stageId}/subtasks`,
+    {
+      ...buildActionOptions(options),
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        assigned_to: input.assignedTo,
+        due_date: input.dueDate,
+      } satisfies ManagerApiSubtaskCreateInput),
+    },
+  );
+}
+
+export async function updateSubtask(
+  rfqId: string,
+  stageId: string,
+  subtaskId: string,
+  input: SubtaskUpdateInput,
+  options?: StageActionOptions,
+): Promise<void> {
+  await requestManagerJson(
+    `/rfqs/${rfqId}/stages/${stageId}/subtasks/${subtaskId}`,
+    {
+      ...buildActionOptions(options),
+      method: "PATCH",
+      body: JSON.stringify({
+        name: input.name,
+        assigned_to: input.assignedTo,
+        due_date: input.dueDate,
+        progress: input.progress,
+        status: input.status,
+      } satisfies ManagerApiSubtaskUpdateInput),
+    },
+  );
+}
+
+export async function deleteSubtask(
+  rfqId: string,
+  stageId: string,
+  subtaskId: string,
+  options?: StageActionOptions,
+): Promise<void> {
+  await requestManagerJson<void>(
+    `/rfqs/${rfqId}/stages/${stageId}/subtasks/${subtaskId}`,
+    {
+      ...buildActionOptions(options),
+      method: "DELETE",
+    },
+  );
+}
+
+export async function listStageNotes(
+  rfqId: string,
+  stageId?: string,
+): Promise<StageNoteModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const notes = managerRfqDetailResponses[rfqId]?.stageNotes ?? [];
@@ -61,12 +296,18 @@ export async function listStageNotes(rfqId: string): Promise<StageNoteModel[]> {
     }));
   }
 
-  return requestJson<StageNoteModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stage-notes`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).notes;
 }
 
-export async function listStageFiles(rfqId: string): Promise<RfqFileModel[]> {
+export async function listStageFiles(
+  rfqId: string,
+  stageId?: string,
+): Promise<RfqFileModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const files = managerRfqDetailResponses[rfqId]?.recentFiles ?? [];
@@ -79,12 +320,18 @@ export async function listStageFiles(rfqId: string): Promise<RfqFileModel[]> {
     }));
   }
 
-  return requestJson<RfqFileModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/stage-files`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).files;
 }
 
-export async function listSubtasks(rfqId: string): Promise<RfqSubtaskModel[]> {
+export async function listSubtasks(
+  rfqId: string,
+  stageId?: string,
+): Promise<RfqSubtaskModel[]> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.35));
     const tasks = managerRfqDetailResponses[rfqId]?.subtasks ?? [];
@@ -97,7 +344,10 @@ export async function listSubtasks(rfqId: string): Promise<RfqSubtaskModel[]> {
     }));
   }
 
-  return requestJson<RfqSubtaskModel[]>(
-    `${apiConfig.managerBaseUrl}/rfqs/${rfqId}/subtasks`,
-  );
+  if (!stageId) {
+    return [];
+  }
+
+  const detail = await getStageDetail(rfqId, stageId);
+  return translateManagerStageDetailCollections(detail).subtasks;
 }

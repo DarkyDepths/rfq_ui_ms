@@ -12,30 +12,19 @@ import { Input } from "@/components/ui/input";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useRfqList } from "@/hooks/use-rfq-list";
-import type { RfqCardModel } from "@/models/manager/rfq";
-
-const statusOptions: Array<{
-  label: string;
-  value: "all" | RfqCardModel["status"];
-}> = [
-  { label: "All", value: "all" },
-  { label: "In Preparation", value: "in_preparation" },
-  { label: "Under Review", value: "under_review" },
-  { label: "Submitted", value: "submitted" },
-  { label: "Won", value: "won" },
-  { label: "Partial / Warning", value: "attention_required" },
-];
 
 export function RFQListScreen() {
   const { role } = useRole();
   const permissions = getPermissions(role);
   const {
+    error,
     filteredRfqs,
     loading,
     search,
     setSearch,
     setStatusFilter,
     statusFilter,
+    statusOptions,
     viewMode,
     setViewMode,
   } = useRfqList();
@@ -115,6 +104,11 @@ export function RFQListScreen() {
           <SkeletonCard className="h-[280px]" lines={6} />
           <SkeletonCard className="h-[280px]" lines={6} />
         </div>
+      ) : error ? (
+        <EmptyState
+          description={error}
+          title="RFQ queue unavailable"
+        />
       ) : filteredRfqs.length === 0 ? (
         <EmptyState
           actionLabel="Reset Filters"

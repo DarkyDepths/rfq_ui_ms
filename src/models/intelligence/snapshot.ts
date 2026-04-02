@@ -1,4 +1,11 @@
 export type ProcessingState = "pending" | "partial" | "complete" | "failed";
+export type IntelligenceAvailabilityState =
+  | "not_available_yet"
+  | "pending"
+  | "partial"
+  | "preliminary"
+  | "failed"
+  | "available";
 
 export interface SnapshotFlagResponse {
   severity: "low" | "medium" | "high";
@@ -54,20 +61,45 @@ export interface IntelligencePortfolioResponse {
 export interface SnapshotFlagModel extends SnapshotFlagResponse {}
 
 export interface IntelligenceSnapshotModel {
-  rfqId: string;
+  kind: "snapshot";
   state: ProcessingState;
-  intakeStatusLabel: string;
-  intakeSummary: string;
-  intakeStats: string[];
-  briefingStatusLabel: string;
-  briefingSummary: string;
-  briefingStrengths: string[];
-  briefingRisks: string[];
-  workbookStatusLabel: string;
-  workbookSummary: string;
-  readinessScore: number;
-  confidenceScore: number;
-  blockers: string[];
-  gaps: string[];
+  availability: IntelligenceAvailabilityState;
+  version?: string;
+  updatedLabel: string;
+  updatedAtValue?: string;
+  generatedLabel: string;
+  generatedAtValue?: string;
+  summary: string;
+  requiresHumanReview: boolean;
+  recommendedTabs: string[];
+  suggestedQuestions: string[];
+  availabilityMatrix: Array<{
+    label: string;
+    value: string;
+  }>;
+  intake: {
+    availability: IntelligenceAvailabilityState;
+    statusLabel: string;
+    summary: string;
+    bullets: string[];
+  };
+  briefing: {
+    availability: IntelligenceAvailabilityState;
+    statusLabel: string;
+    summary: string;
+    bullets: string[];
+  };
+  workbook: {
+    availability: IntelligenceAvailabilityState;
+    statusLabel: string;
+    summary: string;
+    bullets: string[];
+  };
+  review: {
+    availability: IntelligenceAvailabilityState;
+    statusLabel: string;
+    summary: string;
+    bullets: string[];
+  };
   reviewFlags: SnapshotFlagModel[];
 }

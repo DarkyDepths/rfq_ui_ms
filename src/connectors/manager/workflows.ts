@@ -1,11 +1,18 @@
 import { apiConfig } from "@/config/api";
+import { requestManagerJson } from "@/connectors/manager/base";
 import { managerWorkflowResponses } from "@/demo/manager/workflows";
-import { requestJson } from "@/lib/http-client";
+import type {
+  ManagerApiWorkflowDetail,
+  ManagerApiWorkflowListResponse,
+} from "@/models/manager/api-workflow";
 import type {
   ManagerWorkflowResponse,
   WorkflowModel,
 } from "@/models/manager/workflow";
-import { translateWorkflow } from "@/translators/manager/workflows";
+import {
+  translateManagerWorkflowDetail,
+  translateWorkflow,
+} from "@/translators/manager/workflows";
 import { sleep } from "@/utils/async";
 
 export async function listWorkflows(): Promise<WorkflowModel[]> {
@@ -14,11 +21,19 @@ export async function listWorkflows(): Promise<WorkflowModel[]> {
     return managerWorkflowResponses.map(translateWorkflow);
   }
 
-  const response = await requestJson<ManagerWorkflowResponse[]>(
-    `${apiConfig.managerBaseUrl}/workflows`,
+  const response = await requestManagerJson<ManagerApiWorkflowListResponse>(
+    "/workflows",
   );
 
-  return response.map(translateWorkflow);
+  const workflowDetails = await Promise.all(
+    response.data.map((workflow) =>
+      requestManagerJson<ManagerApiWorkflowDetail>(
+        `/workflows/${workflow.id}`,
+      ),
+    ),
+  );
+
+  return workflowDetails.map(translateManagerWorkflowDetail);
 }
 
 export async function getWorkflow(
@@ -32,9 +47,9 @@ export async function getWorkflow(
     return workflow ? translateWorkflow(workflow) : null;
   }
 
-  const response = await requestJson<ManagerWorkflowResponse>(
-    `${apiConfig.managerBaseUrl}/workflows/${workflowId}`,
+  const response = await requestManagerJson<ManagerApiWorkflowDetail>(
+    `/workflows/${workflowId}`,
   );
 
-  return translateWorkflow(response);
+  return translateManagerWorkflowDetail(response);
 }
