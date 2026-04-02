@@ -11,4 +11,5 @@ export const apiConfig = {
   managerAuthToken: process.env.NEXT_PUBLIC_MANAGER_API_TOKEN,
   intelligenceBaseUrl:
     process.env.NEXT_PUBLIC_INTELLIGENCE_API_URL ?? "http://localhost:8001",
+  intelligenceApiPath: "/intelligence/v1",
 } as const;

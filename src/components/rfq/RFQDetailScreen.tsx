@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Layers3,
   Radar,
+  RotateCw,
   Sparkles,
 } from "lucide-react";
 
@@ -17,13 +18,14 @@ import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { apiConfig } from "@/config/api";
-import { requestArtifactReprocess } from "@/connectors/intelligence/artifacts";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useRfqDetail } from "@/hooks/use-rfq-detail";
 import { useRfqIntelligence } from "@/hooks/use-rfq-intelligence";
-import type { ArtifactKind } from "@/models/intelligence/artifacts";
+import type { ReprocessKind } from "@/models/intelligence/artifacts";
+import { intelligenceAvailabilityMeta } from "@/utils/status";
 
 type DetailTab = "operational" | "intelligence" | "artifacts";
 
@@ -44,15 +46,11 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
   const visibleTabValues = permissions.detailTabs as readonly DetailTab[];
   const visibleTabs = tabConfig.filter((tab) => visibleTabValues.includes(tab.value));
   const { error, loading, rfq } = useRfqDetail(rfqId);
-  const {
-    artifacts,
-    artifactsLoading,
-    briefing,
-    phase,
-    snapshot,
-    workbookProfile,
-    workbookReview,
-  } = useRfqIntelligence(rfqId, isDemoMode);
+  const intelligence = useRfqIntelligence(
+    rfqId,
+    permissions.canViewIntelligence || permissions.canViewArtifacts,
+    rfq?.updatedAtValue,
+  );
   const [activeTab, setActiveTab] = useState<DetailTab>("operational");
   const [reprocessMessage, setReprocessMessage] = useState("");
 
@@ -63,13 +61,21 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
     }
   }, [activeTab, visibleTabValues]);
 
-  const handleReprocess = async (kind: ArtifactKind) => {
-    if (!isDemoMode || !permissions.canReprocessArtifacts) {
+  const handleReprocess = async (kind: ReprocessKind) => {
+    if (!permissions.canReprocessArtifacts) {
       return;
     }
 
-    const response = await requestArtifactReprocess(rfqId, kind);
-    setReprocessMessage(response.message);
+    try {
+      const response = await intelligence.requestReprocess(kind);
+      setReprocessMessage(response.message);
+    } catch (requestError) {
+      setReprocessMessage(
+        requestError instanceof Error
+          ? requestError.message
+          : "Reprocess request could not be submitted.",
+      );
+    }
   };
 
   if (loading) {
@@ -93,6 +99,20 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
       />
     );
   }
+
+  const liveIntelState =
+    intelligence.snapshot.data?.availability ??
+    intelligence.briefing.data?.availability ??
+    intelligence.workbookProfile.data?.availability ??
+    intelligence.workbookReview.data?.availability ??
+    (intelligence.snapshot.loading ||
+    intelligence.briefing.loading ||
+    intelligence.workbookProfile.loading ||
+    intelligence.workbookReview.loading
+      ? "pending"
+      : "not_available_yet");
+
+  const liveIntelMeta = intelligenceAvailabilityMeta[liveIntelState];
 
   return (
     <div className="space-y-6">
@@ -127,7 +147,7 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
                 Intel: {rfq.intelligenceState}
               </Badge>
             ) : (
-              <Badge variant="pending">Intel unavailable</Badge>
+              <Badge variant={liveIntelMeta.tone}>Intel: {liveIntelMeta.label}</Badge>
             )}
           </div>
         </div>
@@ -355,7 +375,7 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
                       Upload Actions
                     </h3>
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      File upload actions are not connected in this Phase 1 live slice. Existing current-stage files above come directly from the manager service.
+                      File upload actions are not connected in this live slice. Existing current-stage files above come directly from the manager service.
                     </p>
                   </div>
                 )}
@@ -429,75 +449,92 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
           ) : null}
 
           {activeTab === "intelligence" ? (
-            isDemoMode ? (
-              <div className="space-y-6">
-                <IntelligencePanel
-                  briefing={briefing}
-                  phase={phase}
-                  snapshot={snapshot}
-                  workbookProfile={workbookProfile}
-                  workbookReview={workbookReview}
-                />
-              </div>
-            ) : (
-              <div className="surface-panel p-6">
-                <div className="section-kicker">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Intelligence Unavailable
-                </div>
-                <h2 className="mt-3 text-lg font-semibold text-foreground">
-                  Live intelligence is not connected in Phase 1
-                </h2>
-                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                  This detail page is manager-backed in live mode. Intelligence panels remain intentionally unavailable until the intelligence contracts are wired truthfully.
-                </p>
-              </div>
-            )
+            <IntelligencePanel
+              briefing={intelligence.briefing}
+              snapshot={intelligence.snapshot}
+              staleIntel={intelligence.staleIntel}
+              workbookProfile={intelligence.workbookProfile}
+              workbookReview={intelligence.workbookReview}
+            />
           ) : null}
 
           {activeTab === "artifacts" ? (
-            isDemoMode ? (
-              <div className="space-y-5">
-                {reprocessMessage ? (
-                  <div className="rounded-xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
-                    {reprocessMessage}
+            <div className="space-y-5">
+              {permissions.canReprocessArtifacts ? (
+                <div className="surface-panel p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Reprocess Actions
+                      </h3>
+                      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                        Only confirmed intelligence reprocess routes are exposed here. The current backend accepts these requests and may still return a stub acceptance message.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => handleReprocess("intake")}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        <RotateCw className="mr-2 h-3.5 w-3.5" />
+                        Reprocess Intake
+                      </Button>
+                      <Button
+                        onClick={() => handleReprocess("workbook")}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        <RotateCw className="mr-2 h-3.5 w-3.5" />
+                        Reprocess Workbook
+                      </Button>
+                    </div>
                   </div>
-                ) : null}
-
-                {artifactsLoading ? (
-                  <div className="grid gap-5 xl:grid-cols-2">
-                    <SkeletonCard className="h-[240px]" lines={5} />
-                    <SkeletonCard className="h-[240px]" lines={5} />
-                    <SkeletonCard className="h-[240px]" lines={5} />
-                    <SkeletonCard className="h-[240px]" lines={5} />
-                  </div>
-                ) : (
-                  <div className="grid gap-5 xl:grid-cols-2">
-                    {artifacts.map((artifact) => (
-                      <ArtifactCard
-                        key={artifact.id}
-                        allowReprocess={permissions.canReprocessArtifacts}
-                        artifact={artifact}
-                        onReprocess={handleReprocess}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="surface-panel p-6">
-                <div className="section-kicker">
-                  <Layers3 className="h-3.5 w-3.5" />
-                  Artifacts Unavailable
                 </div>
-                <h2 className="mt-3 text-lg font-semibold text-foreground">
-                  Artifact catalog is not connected in live mode yet
-                </h2>
-                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                  The artifact catalog belongs to the intelligence service and stays out of this Phase 1 manager-only slice.
-                </p>
-              </div>
-            )
+              ) : null}
+
+              {reprocessMessage ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
+                  {reprocessMessage}
+                </div>
+              ) : null}
+
+              {intelligence.artifacts.loading ? (
+                <div className="grid gap-5 xl:grid-cols-2">
+                  <SkeletonCard className="h-[240px]" lines={5} />
+                  <SkeletonCard className="h-[240px]" lines={5} />
+                  <SkeletonCard className="h-[240px]" lines={5} />
+                  <SkeletonCard className="h-[240px]" lines={5} />
+                </div>
+              ) : intelligence.artifacts.error ? (
+                <EmptyState
+                  description={intelligence.artifacts.error}
+                  title="Artifact catalog unavailable"
+                />
+              ) : intelligence.artifacts.data.length === 0 ? (
+                <div className="surface-panel p-6">
+                  <div className="section-kicker">
+                    <Layers3 className="h-3.5 w-3.5" />
+                    No Artifacts Yet
+                  </div>
+                  <h2 className="mt-3 text-lg font-semibold text-foreground">
+                    No intelligence artifacts have been generated for this RFQ
+                  </h2>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                    The artifact index endpoint returned an empty list, so there is nothing to display yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-5 xl:grid-cols-2">
+                  {intelligence.artifacts.data.map((artifact) => (
+                    <ArtifactCard
+                      key={`${artifact.id}-${artifact.version}`}
+                      artifact={artifact}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ) : null}
         </motion.div>
       </AnimatePresence>

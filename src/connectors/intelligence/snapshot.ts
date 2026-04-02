@@ -1,13 +1,17 @@
 import { apiConfig } from "@/config/api";
 import { intelligencePortfolioResponse, snapshotResponses } from "@/demo/intelligence/snapshot";
-import { requestJson } from "@/lib/http-client";
+import { requestIntelligenceJson } from "@/connectors/intelligence/base";
+import { HttpError } from "@/lib/http-client";
 import type {
-  IntelligencePortfolioResponse,
+  IntelligenceArtifactEnvelope,
+  IntelligenceSnapshotContent,
+} from "@/models/intelligence/api";
+import type {
   IntelligenceSnapshotModel,
-  SnapshotResponse,
 } from "@/models/intelligence/snapshot";
 import type { IntelligencePortfolioModel } from "@/models/ui/dashboard";
 import {
+  translateLiveSnapshot,
   translatePortfolioSummary,
   translateSnapshot,
 } from "@/translators/intelligence/snapshot";
@@ -19,11 +23,9 @@ export async function getIntelligencePortfolioSummary(): Promise<IntelligencePor
     return translatePortfolioSummary(intelligencePortfolioResponse);
   }
 
-  const response = await requestJson<IntelligencePortfolioResponse>(
-    `${apiConfig.intelligenceBaseUrl}/snapshot/portfolio`,
+  throw new Error(
+    "Portfolio intelligence is not connected in live mode for this phase.",
   );
-
-  return translatePortfolioSummary(response);
 }
 
 export async function getIntelligenceSnapshot(
@@ -35,9 +37,17 @@ export async function getIntelligenceSnapshot(
     return response ? translateSnapshot(response) : null;
   }
 
-  const response = await requestJson<SnapshotResponse>(
-    `${apiConfig.intelligenceBaseUrl}/snapshot/${rfqId}`,
-  );
+  try {
+    const response = await requestIntelligenceJson<
+      IntelligenceArtifactEnvelope<IntelligenceSnapshotContent>
+    >(`/rfqs/${rfqId}/snapshot`);
 
-  return translateSnapshot(response);
+    return translateLiveSnapshot(response);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }

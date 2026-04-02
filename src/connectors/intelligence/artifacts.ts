@@ -1,13 +1,19 @@
 import { apiConfig } from "@/config/api";
 import { artifactResponses } from "@/demo/intelligence/artifacts";
-import { requestJson } from "@/lib/http-client";
+import { requestIntelligenceJson } from "@/connectors/intelligence/base";
 import type {
-  ArtifactKind,
+  IntelligenceArtifactIndexResponse,
+  IntelligenceReprocessResponse,
+} from "@/models/intelligence/api";
+import type {
   ArtifactModel,
-  ArtifactResponse,
+  ReprocessKind,
   ReprocessResult,
 } from "@/models/intelligence/artifacts";
-import { translateArtifact } from "@/translators/intelligence/artifacts";
+import {
+  translateArtifact,
+  translateLiveArtifactSummary,
+} from "@/translators/intelligence/artifacts";
 import { sleep } from "@/utils/async";
 
 export async function getArtifactCatalog(
@@ -18,31 +24,40 @@ export async function getArtifactCatalog(
     return (artifactResponses[rfqId] ?? []).map(translateArtifact);
   }
 
-  const response = await requestJson<ArtifactResponse[]>(
-    `${apiConfig.intelligenceBaseUrl}/artifacts/${rfqId}`,
+  const response = await requestIntelligenceJson<IntelligenceArtifactIndexResponse>(
+    `/rfqs/${rfqId}/artifacts`,
   );
 
-  return response.map(translateArtifact);
+  return response.artifacts.map(translateLiveArtifactSummary);
 }
 
 export async function requestArtifactReprocess(
   rfqId: string,
-  kind: ArtifactKind,
+  kind: ReprocessKind,
 ): Promise<ReprocessResult> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.5));
     return {
-      rfqId,
       kind,
       accepted: true,
       message: `${kind} reprocess queued in demo mode.`,
+      status: "accepted",
     };
   }
 
-  return requestJson<ReprocessResult>(
-    `${apiConfig.intelligenceBaseUrl}/artifacts/${rfqId}/${kind}/reprocess`,
+  const response = await requestIntelligenceJson<IntelligenceReprocessResponse>(
+    `/rfqs/${rfqId}/reprocess/${kind}`,
     {
       method: "POST",
     },
   );
+
+  return {
+    kind,
+    accepted: response.status === "accepted",
+    message:
+      response.message ??
+      "Reprocess request accepted by the intelligence service.",
+    status: response.status ?? "accepted",
+  };
 }
