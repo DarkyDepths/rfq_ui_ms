@@ -136,12 +136,14 @@ export function IntelligencePanel({
   briefing,
   snapshot,
   staleIntel,
+  viewMode = "working",
   workbookProfile,
   workbookReview,
 }: {
   briefing: IntelligenceResourceState<BriefingArtifactModel | null>;
   snapshot: IntelligenceResourceState<IntelligenceSnapshotModel | null>;
   staleIntel: IntelligenceStaleNotice | null;
+  viewMode?: "curated" | "working";
   workbookProfile: IntelligenceResourceState<WorkbookProfileModel | null>;
   workbookReview: IntelligenceResourceState<WorkbookReviewModel | null>;
 }) {
@@ -290,110 +292,114 @@ export function IntelligencePanel({
           />
         </PanelCard>
 
-        <PanelCard icon={CheckCheck} title="Workbook Profile">
-          <ResourceShell
-            emptyDescription="The workbook profile is not available yet for this RFQ."
-            emptyTitle="Workbook profile unavailable"
-            render={(data) => (
-              <div className="space-y-4">
-                <MetaRow
-                  availability={data.availability}
-                  updatedLabel={data.updatedLabel}
-                  version={data.version}
-                />
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {data.summary}
-                </p>
-                {data.sheetStats.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {data.sheetStats.map((stat) => (
-                      <Badge key={stat} variant="default">
-                        {stat}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-                <ListSection
-                  emptyLabel="No tracked sheets are listed."
-                  items={data.trackedSheets}
-                  title="Tracked Sheets"
-                />
-                <ListSection
-                  emptyLabel="No missing sections are listed."
-                  items={data.missingSections}
-                  title="Missing Sections"
-                />
-                <ListSection
-                  emptyLabel="No workbook notes are currently available."
-                  items={data.notes}
-                  title="Notes"
-                />
-              </div>
-            )}
-            resource={workbookProfile}
-          />
-        </PanelCard>
-
-        <PanelCard icon={Flag} title="Workbook Review">
-          <ResourceShell
-            emptyDescription="The workbook review report is not available yet for this RFQ."
-            emptyTitle="Workbook review unavailable"
-            render={(data) => (
-              <div className="space-y-4">
-                <MetaRow
-                  availability={data.availability}
-                  updatedLabel={data.updatedLabel}
-                  version={data.version}
-                />
-                <div className="flex flex-wrap gap-2">
-                  {typeof data.activeFindingsCount === "number" ? (
-                    <Badge variant="gold">{data.activeFindingsCount} active finding(s)</Badge>
-                  ) : null}
-                  {data.unavailableFamilies.map((family) => (
-                    <Badge key={family} variant="pending">
-                      {family.replaceAll("_", " ")}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {data.summary}
-                </p>
-                {data.findings.length > 0 ? (
-                  <div className="space-y-2">
-                    {data.findings.map((finding) => (
-                      <div key={finding.id} className="stat-cell">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-medium text-foreground">
-                            {finding.title}
-                          </div>
-                          <Badge
-                            variant={
-                              finding.severity === "high"
-                                ? "rose"
-                                : finding.severity === "medium"
-                                  ? "gold"
-                                  : "steel"
-                            }
-                          >
-                            {finding.severity}
+        {viewMode === "working" ? (
+          <>
+            <PanelCard icon={CheckCheck} title="Workbook Profile">
+              <ResourceShell
+                emptyDescription="The workbook profile is not available yet for this RFQ."
+                emptyTitle="Workbook profile unavailable"
+                render={(data) => (
+                  <div className="space-y-4">
+                    <MetaRow
+                      availability={data.availability}
+                      updatedLabel={data.updatedLabel}
+                      version={data.version}
+                    />
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {data.summary}
+                    </p>
+                    {data.sheetStats.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {data.sheetStats.map((stat) => (
+                          <Badge key={stat} variant="default">
+                            {stat}
                           </Badge>
-                        </div>
-                        <div className="mt-1.5 text-sm text-muted-foreground">
-                          {finding.detail}
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
-                    No active workbook review findings are currently listed.
+                    ) : null}
+                    <ListSection
+                      emptyLabel="No tracked sheets are listed."
+                      items={data.trackedSheets}
+                      title="Tracked Sheets"
+                    />
+                    <ListSection
+                      emptyLabel="No missing sections are listed."
+                      items={data.missingSections}
+                      title="Missing Sections"
+                    />
+                    <ListSection
+                      emptyLabel="No workbook notes are currently available."
+                      items={data.notes}
+                      title="Notes"
+                    />
                   </div>
                 )}
-              </div>
-            )}
-            resource={workbookReview}
-          />
-        </PanelCard>
+                resource={workbookProfile}
+              />
+            </PanelCard>
+
+            <PanelCard icon={Flag} title="Workbook Review">
+              <ResourceShell
+                emptyDescription="The workbook review report is not available yet for this RFQ."
+                emptyTitle="Workbook review unavailable"
+                render={(data) => (
+                  <div className="space-y-4">
+                    <MetaRow
+                      availability={data.availability}
+                      updatedLabel={data.updatedLabel}
+                      version={data.version}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {typeof data.activeFindingsCount === "number" ? (
+                        <Badge variant="gold">{data.activeFindingsCount} active finding(s)</Badge>
+                      ) : null}
+                      {data.unavailableFamilies.map((family) => (
+                        <Badge key={family} variant="pending">
+                          {family.replaceAll("_", " ")}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {data.summary}
+                    </p>
+                    {data.findings.length > 0 ? (
+                      <div className="space-y-2">
+                        {data.findings.map((finding) => (
+                          <div key={finding.id} className="stat-cell">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm font-medium text-foreground">
+                                {finding.title}
+                              </div>
+                              <Badge
+                                variant={
+                                  finding.severity === "high"
+                                    ? "rose"
+                                    : finding.severity === "medium"
+                                      ? "gold"
+                                      : "steel"
+                                }
+                              >
+                                {finding.severity}
+                              </Badge>
+                            </div>
+                            <div className="mt-1.5 text-sm text-muted-foreground">
+                              {finding.detail}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+                        No active workbook review findings are currently listed.
+                      </div>
+                    )}
+                  </div>
+                )}
+                resource={workbookReview}
+              />
+            </PanelCard>
+          </>
+        ) : null}
       </div>
     </div>
   );

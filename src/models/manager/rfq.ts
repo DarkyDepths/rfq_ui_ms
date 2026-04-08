@@ -40,6 +40,7 @@ export interface ManagerRfqListItemResponse {
   workflowId: string;
   workflowName: string;
   status: ManagerRfqStatus;
+  outcomeReason?: string;
   intelligenceState: IntelligenceState;
   priority: PriorityLevel;
   nextAction: string;
@@ -67,6 +68,7 @@ export interface ManagerFileResponse {
   label: string;
   type: string;
   uploadedAt: string;
+  uploadedBy?: string;
   status: "processed" | "pending" | "rejected";
 }
 
@@ -89,6 +91,9 @@ export interface ManagerUploadSlotResponse {
 
 export interface ManagerRfqDetailResponse extends ManagerRfqListItemResponse {
   description: string;
+  industry?: string;
+  country?: string;
+  outcomeReason?: string;
   procurementLead: string;
   estimatedSubmissionDate: string;
   stageNotes: ManagerStageNoteResponse[];
@@ -111,6 +116,7 @@ export interface StageNoteModel {
   id: string;
   author: string;
   note: string;
+  createdAtValue?: string;
   createdLabel: string;
   tone?: "info" | "warning" | "success";
 }
@@ -141,6 +147,11 @@ export interface ReminderModel {
   id: string;
   rfqId: string;
   rfqStageId?: string | null;
+  rfqCode?: string;
+  rfqName?: string;
+  rfqDeadlineValue?: string;
+  rfqStageName?: string;
+  source: "manual" | "automatic";
   type: "internal" | "external";
   message: string;
   dueDateValue: string;
@@ -149,8 +160,11 @@ export interface ReminderModel {
   delayDays: number;
   assignedTo?: string;
   createdBy?: string;
+  createdAtValue: string;
   createdLabel: string;
+  updatedAtValue?: string;
   updatedLabel?: string;
+  lastSentAtValue?: string;
   lastSentLabel?: string;
   sendCount: number;
 }
@@ -186,6 +200,7 @@ export interface RfqCardModel {
   title: string;
   client: string;
   owner: string;
+  workflowId?: string;
   region?: string;
   workflowName?: string;
   valueLabel?: string;
@@ -193,6 +208,7 @@ export interface RfqCardModel {
   dueLabel: string;
   status: ManagerRfqStatus;
   statusLabel: string;
+  outcomeReason?: string;
   intelligenceState?: IntelligenceState;
   priority: PriorityLevel;
   nextAction?: string;
@@ -201,12 +217,15 @@ export interface RfqCardModel {
   stageLabel: string;
   stageProgress: number;
   stageHistory: StageProgressModel[];
+  blockerStatus?: "Blocked";
+  blockerReasonCode?: string;
   updatedAtValue?: string;
   updatedAtLabel?: string;
 }
 
 export interface RfqDetailModel extends RfqCardModel {
   description?: string;
+  industry?: string;
   procurementLead?: string;
   estimatedSubmissionLabel?: string;
   currentStageId?: string | null;
@@ -225,8 +244,8 @@ export interface CreateRfqInput {
   deadline: string;
   priority: "normal" | "critical";
   description?: string;
-  industry?: string;
-  country?: string;
+  industry: string;
+  country: string;
 }
 
 export interface UpdateRfqInput {
@@ -238,8 +257,11 @@ export interface UpdateRfqInput {
   deadline?: string;
   owner?: string;
   description?: string;
-  status?: ManagerRfqStatus;
   outcomeReason?: string;
+}
+
+export interface CancelRfqInput {
+  outcomeReason: string;
 }
 
 export interface RfqMutationResult {
@@ -250,8 +272,8 @@ export interface RfqMutationResult {
 
 export interface SubtaskCreateInput {
   name: string;
-  assignedTo?: string;
-  dueDate?: string;
+  assignedTo: string;
+  dueDate: string;
 }
 
 export interface SubtaskUpdateInput {

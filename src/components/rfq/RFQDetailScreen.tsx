@@ -2,23 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ClipboardCheck, Layers3, Radar, Sparkles } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Layers3, Radar, Sparkles } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { IntelligenceActionsPanel } from "@/components/intelligence/IntelligenceActionsPanel";
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
+import { ExecutiveStrategicDetail } from "@/components/rfq/ExecutiveStrategicDetail";
+import { LeadershipNotesPanel } from "@/components/rfq/LeadershipNotesPanel";
 import { RfqOperationalWorkspace } from "@/components/rfq/RfqOperationalWorkspace";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
-import { apiConfig } from "@/config/api";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
+import { useToast } from "@/context/toast-context";
 import { useRfqDetail } from "@/hooks/use-rfq-detail";
 import { useRfqIntelligence } from "@/hooks/use-rfq-intelligence";
-import { intelligenceAvailabilityMeta } from "@/utils/status";
+import { getRoleActorProfile } from "@/lib/manager-actor";
+import {
+  canReadOperationalWorkspace,
+  canReadRfqLifecycle,
+} from "@/lib/rfq-access";
 
 type DetailTab = "operational" | "intelligence" | "artifacts";
 
@@ -35,16 +42,35 @@ const tabConfig: Array<{
 export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
   const { role } = useRole();
   const permissions = getPermissions(role);
-  const isDemoMode = apiConfig.useMockData;
-  const visibleTabValues = permissions.detailTabs as readonly DetailTab[];
-  const visibleTabs = tabConfig.filter((tab) => visibleTabValues.includes(tab.value));
+  const actorName = getRoleActorProfile(role).userName;
+  const { pushToast } = useToast();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { error, loading, refresh, rfq } = useRfqDetail(rfqId);
+  const canOpenLifecycle = rfq
+    ? canReadRfqLifecycle(role, permissions, rfq, actorName)
+    : false;
+  const canOpenOperational = rfq
+    ? canReadOperationalWorkspace(role, permissions, rfq, actorName)
+    : false;
+  const shouldShowOperationalTab = rfq
+    ? canOpenOperational
+    : permissions.canReadOperationalWorkspace;
+  const visibleTabValues = (
+    shouldShowOperationalTab
+      ? permissions.detailTabs
+      : permissions.detailTabs.filter((tab) => tab !== "operational")
+  ) as readonly DetailTab[];
+  const visibleTabs = tabConfig.filter((tab) => visibleTabValues.includes(tab.value));
   const intelligence = useRfqIntelligence(
     rfqId,
-    permissions.canViewIntelligence || permissions.canViewArtifacts,
+    canOpenLifecycle && (permissions.canViewIntelligence || permissions.canViewArtifacts),
     rfq?.updatedAtValue,
   );
-  const [activeTab, setActiveTab] = useState<DetailTab>("operational");
+  const [activeTab, setActiveTab] = useState<DetailTab>(
+    role === "executive" ? "intelligence" : "operational",
+  );
+  const [showCreatedNotice, setShowCreatedNotice] = useState(false);
 
   useEffect(() => {
     if (!visibleTabValues.includes(activeTab)) {
@@ -53,9 +79,64 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
     }
   }, [activeTab, visibleTabValues]);
 
+  useEffect(() => {
+    const createdFromQuery = searchParams.get("created") === "1";
+    const createdFromLegacyHash =
+      typeof window !== "undefined" && window.location.hash === "#rfq-created";
+
+    if (!createdFromQuery && !createdFromLegacyHash) {
+      return;
+    }
+
+    setShowCreatedNotice(true);
+    pushToast({
+      title: "RFQ created",
+      description: "The RFQ is now live, in preparation, and its workflow stages were generated automatically.",
+      tone: "success",
+    });
+
+    const dismissTimer = window.setTimeout(() => {
+      setShowCreatedNotice(false);
+    }, 4200);
+
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.delete("created");
+    const nextSearch = nextSearchParams.toString();
+
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${pathname}${nextSearch ? `?${nextSearch}` : ""}`,
+    );
+
+    return () => {
+      window.clearTimeout(dismissTimer);
+    };
+  }, [pathname, pushToast, rfqId, searchParams]);
+
+  const createdNotice = showCreatedNotice ? (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="surface-panel border-emerald-500/25 bg-emerald-500/10 p-4"
+      initial={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+        <div>
+          <div className="text-sm font-semibold text-foreground">RFQ created successfully</div>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            The RFQ is now live, in preparation, and its workflow stages were generated automatically.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  ) : null;
+
   if (loading) {
     return (
       <div className="space-y-6">
+        {createdNotice}
         <SkeletonCard className="h-[200px]" lines={6} />
         <div className="grid gap-5 xl:grid-cols-3">
           <SkeletonCard className="h-[280px]" lines={6} />
@@ -75,26 +156,40 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
     );
   }
 
-  const liveIntelState =
-    intelligence.snapshot.data?.availability ??
-    intelligence.briefing.data?.availability ??
-    intelligence.workbookProfile.data?.availability ??
-    intelligence.workbookReview.data?.availability ??
-    (intelligence.snapshot.loading ||
-    intelligence.briefing.loading ||
-    intelligence.workbookProfile.loading ||
-    intelligence.workbookReview.loading
-      ? "pending"
-      : "not_available_yet");
+  if (!canOpenLifecycle) {
+    return (
+      <EmptyState
+        description="This RFQ is outside your current strategic or contributor scope."
+        title="RFQ access is limited for this role"
+      />
+    );
+  }
 
-  const liveIntelMeta = intelligenceAvailabilityMeta[liveIntelState];
+  if (role === "executive") {
+    return (
+      <div className="space-y-6">
+        {createdNotice}
+        <ExecutiveStrategicDetail
+          actorName={actorName}
+          briefing={intelligence.briefing}
+          permissions={permissions}
+          rfq={rfq}
+          snapshot={intelligence.snapshot}
+          staleIntel={intelligence.staleIntel}
+          workbookProfile={intelligence.workbookProfile}
+          workbookReview={intelligence.workbookReview}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {createdNotice}
       <section className="surface-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="section-kicker">{rfq.rfqCode ?? rfq.id}</div>
+            <div className="section-kicker">{rfq.rfqCode?.trim() || "RFQ Detail"}</div>
             <h1 className="mt-3 text-display text-2xl font-semibold text-foreground lg:text-3xl">
               {rfq.title}
             </h1>
@@ -107,23 +202,7 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <RFQStatusChip status={rfq.status} />
             {rfq.workflowName ? <Badge variant="steel">{rfq.workflowName}</Badge> : null}
-            {isDemoMode && rfq.intelligenceState ? (
-              <Badge
-                variant={
-                  rfq.intelligenceState === "complete"
-                    ? "emerald"
-                    : rfq.intelligenceState === "failed"
-                      ? "rose"
-                      : rfq.intelligenceState === "partial"
-                        ? "gold"
-                        : "pending"
-                }
-              >
-                Intel: {rfq.intelligenceState}
-              </Badge>
-            ) : (
-              <Badge variant={liveIntelMeta.tone}>Intel: {liveIntelMeta.label}</Badge>
-            )}
+            {rfq.intelligenceState ? <Badge variant="steel">Intel: {rfq.intelligenceState}</Badge> : null}
           </div>
         </div>
 
@@ -172,7 +251,49 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
             </div>
           </div>
         )}
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="stat-cell">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Lifecycle Posture
+            </div>
+            <div className="mt-1 font-medium text-foreground">
+              {rfq.statusLabel} · {rfq.stageLabel}
+            </div>
+          </div>
+          <div className="stat-cell">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Estimated Submission
+            </div>
+            <div className="mt-1 font-medium text-foreground">
+              {rfq.estimatedSubmissionLabel ?? "Pending"}
+            </div>
+          </div>
+          <div className="stat-cell">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Procurement Lead
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">{rfq.procurementLead ?? "Not recorded"}</div>
+          </div>
+          <div className="stat-cell">
+            <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Outcome Reason
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {rfq.outcomeReason ?? "Not captured"}
+            </div>
+          </div>
+        </div>
       </section>
+
+      {permissions.canReadLeadershipNotes ? (
+        <LeadershipNotesPanel
+          actorName={actorName}
+          permissions={permissions}
+          rfqId={rfq.id}
+          role={role}
+        />
+      ) : null}
 
       <div className="flex gap-1.5 rounded-xl border border-border bg-muted/40 p-1 dark:bg-white/[0.02]">
         {visibleTabs.map((tab) => {
@@ -231,12 +352,12 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
                 permissions={permissions}
                 rfqOutcomeReason={rfq.outcomeReason}
                 rfqStatus={rfq.status}
-                role={role}
               />
               <IntelligencePanel
                 briefing={intelligence.briefing}
                 snapshot={intelligence.snapshot}
                 staleIntel={intelligence.staleIntel}
+                viewMode="working"
                 workbookProfile={intelligence.workbookProfile}
                 workbookReview={intelligence.workbookReview}
               />

@@ -8,6 +8,7 @@ import { AppShellProvider } from "@/context/app-shell-context";
 import { ConnectionProvider } from "@/context/connection-context";
 import { RoleProvider } from "@/context/role-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { ToastProvider } from "@/context/toast-context";
 
 const displayFont = Syne({
   subsets: ["latin"],
@@ -46,11 +47,13 @@ export default function RootLayout({
         className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} min-h-screen bg-background text-foreground`}
       >
         <ThemeProvider>
-          <RoleProvider>
-            <ConnectionProvider>
-              <AppShellProvider>{children}</AppShellProvider>
-            </ConnectionProvider>
-          </RoleProvider>
+          <ToastProvider>
+            <RoleProvider>
+              <ConnectionProvider>
+                <AppShellProvider>{children}</AppShellProvider>
+              </ConnectionProvider>
+            </RoleProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

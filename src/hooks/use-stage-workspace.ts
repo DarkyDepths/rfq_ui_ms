@@ -37,9 +37,9 @@ export function useStageWorkspace(
     }
 
     setState((current) => ({
-      ...current,
       error: null,
       loading: true,
+      workspace: current.workspace?.id === stageId ? current.workspace : null,
     }));
 
     async function load() {

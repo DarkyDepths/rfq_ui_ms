@@ -44,7 +44,6 @@ export function IntelligenceActionsPanel({
   permissions,
   rfqOutcomeReason,
   rfqStatus,
-  role,
 }: {
   onRefresh: () => void;
   onReprocess: (kind: ReprocessKind) => Promise<{ message: string }>;
@@ -57,13 +56,12 @@ export function IntelligenceActionsPanel({
   permissions: RolePermissions;
   rfqOutcomeReason?: string;
   rfqStatus: ManagerRfqStatus;
-  role: "executive" | "manager" | "estimator";
 }) {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const terminalOutcome = mapStatusToOutcome(rfqStatus);
-  const canTrigger = role === "manager";
+  const canTrigger = permissions.canTriggerIntelligence;
 
   async function runAction<T>(
     key: string,

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ClipboardPlus, Sparkles } from "lucide-react";
+import { ClipboardPlus, Sparkles } from "lucide-react";
 
 import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { Button } from "@/components/ui/button";
@@ -10,36 +12,98 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiConfig } from "@/config/api";
-import { createRfqDraft } from "@/connectors/manager/rfqs";
+import {
+  DEFAULT_INDUSTRY_OPTION,
+  OTHER_INDUSTRY_OPTION,
+  industryOptions,
+  resolveIndustryValue,
+  type IndustryOption,
+} from "@/config/industry-options";
+import { createRfq } from "@/connectors/manager/rfqs";
 import { listWorkflows } from "@/connectors/manager/workflows";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
+import { getRoleActorProfile } from "@/lib/manager-actor";
 import type { WorkflowModel } from "@/models/manager/workflow";
+import {
+  addDaysToLocalDate,
+  buildWorkflowDeadlineTooNarrowMessage,
+  formatWorkflowDeadlineIso,
+  getLocalDateIsoString,
+  getMinimumWorkflowFeasibleDeadlineIso,
+} from "@/utils/workflow-deadline";
 
 const priorities = ["normal", "critical"] as const;
+const selectClassName =
+  "flex h-11 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50";
+
+function normalizeText(value: string) {
+  return value.trim();
+}
+
+function FieldLabel({
+  htmlFor,
+  isOptional = false,
+  required = false,
+  children,
+}: {
+  htmlFor?: string;
+  isOptional?: boolean;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <Label htmlFor={htmlFor}>
+        {children}
+        {required ? <span className="ml-1 text-rose-500">*</span> : null}
+      </Label>
+      {isOptional ? (
+        <span className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          Optional
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export function RFQCreateScreen() {
   const { role } = useRole();
   const permissions = getPermissions(role);
+  const actorProfile = getRoleActorProfile(role);
+  const router = useRouter();
+  const todayIso = getLocalDateIsoString();
   const [loading, setLoading] = useState(true);
   const [workflows, setWorkflows] = useState<WorkflowModel[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
   const [title, setTitle] = useState("Structured Power Redundancy Upgrade");
   const [client, setClient] = useState("GHI Strategic Systems");
-  const [owner, setOwner] = useState("Proposals Team A");
+  const [owner, setOwner] = useState(actorProfile.userName);
   const [valueSar, setValueSar] = useState("12400000");
-  const [dueDate, setDueDate] = useState("2026-04-22");
+  const [dueDate, setDueDate] = useState(() => addDaysToLocalDate(new Date(), 14));
   const [priority, setPriority] = useState<(typeof priorities)[number]>("critical");
   const [description, setDescription] = useState(
     "High-value package requiring synchronized operational control and intelligence visibility from intake onward.",
   );
-  const [industry, setIndustry] = useState("Industrial Systems");
+  const [selectedIndustryOption, setSelectedIndustryOption] =
+    useState<IndustryOption>(DEFAULT_INDUSTRY_OPTION);
+  const [customIndustry, setCustomIndustry] = useState("");
   const [country, setCountry] = useState("Saudi Arabia");
   const [errorMessage, setErrorMessage] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    setOwner(actorProfile.userName);
+  }, [actorProfile.userName]);
+
+  useEffect(() => {
+    if (!permissions.canCreateRfq) {
+      setLoading(false);
+      setWorkflows([]);
+      setSelectedWorkflowId("");
+      return;
+    }
+
     let active = true;
 
     async function load() {
@@ -64,37 +128,77 @@ export function RFQCreateScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [permissions.canCreateRfq]);
 
   const selectedWorkflow = workflows.find(
     (workflow) => workflow.id === selectedWorkflowId,
   );
+  const minimumFeasibleDueDateIso =
+    getMinimumWorkflowFeasibleDeadlineIso(selectedWorkflow);
+  const dueDateTooNarrow =
+    minimumFeasibleDueDateIso !== null && dueDate < minimumFeasibleDueDateIso;
 
-  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!permissions.canCreateRfq || !selectedWorkflow) {
+    const normalizedTitle = normalizeText(title);
+    const normalizedClient = normalizeText(client);
+    const normalizedOwner = normalizeText(owner);
+    const normalizedDescription = normalizeText(description);
+    const normalizedIndustry = normalizeText(
+      resolveIndustryValue(selectedIndustryOption, customIndustry),
+    );
+    const normalizedCountry = normalizeText(country);
+
+    if (!permissions.canCreateRfq) {
       return;
     }
 
     setErrorMessage("");
-    setSaveMessage("");
+
+    if (
+      !normalizedTitle ||
+      !normalizedClient ||
+      !normalizedOwner ||
+      !normalizedIndustry ||
+      !normalizedCountry ||
+      !dueDate ||
+      !selectedWorkflow
+    ) {
+      setErrorMessage(
+        "Complete all required fields before creating the RFQ: title, client, owner, industry, country, due date, and workflow.",
+      );
+      return;
+    }
+
+    if (dueDate < todayIso) {
+      setErrorMessage("Due date cannot be in the past.");
+      return;
+    }
+
+    if (minimumFeasibleDueDateIso && dueDate < minimumFeasibleDueDateIso) {
+      setErrorMessage(
+        buildWorkflowDeadlineTooNarrowMessage(minimumFeasibleDueDateIso),
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const result = await createRfqDraft({
-        client,
-        country,
+      const result = await createRfq({
+        client: normalizedClient,
+        country: normalizedCountry,
         deadline: dueDate,
-        description,
-        industry,
-        name: title,
-        owner,
+        description: normalizedDescription || undefined,
+        industry: normalizedIndustry,
+        name: normalizedTitle,
+        owner: normalizedOwner,
         priority,
         workflowId: selectedWorkflow.id,
       });
 
-      setSaveMessage(result.message);
+      router.push(`/rfqs/${result.id}?created=1`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "RFQ creation failed.",
@@ -118,30 +222,17 @@ export function RFQCreateScreen() {
       <form className="surface-panel p-8" onSubmit={handleSave}>
         <div className="section-kicker">
           <ClipboardPlus className="h-3.5 w-3.5" />
-          Create RFQ shell
+          Create RFQ
         </div>
         <h1 className="mt-4 text-display text-3xl font-semibold text-foreground lg:text-4xl">
-          Stage a new RFQ draft through the manager path
+          Create a new RFQ
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          The frontend keeps creation on the manager boundary and does not invent unsupported live fields during submission.
+          This creates a live RFQ immediately, sets it to In preparation, and auto-generates the workflow stages from the selected manager workflow.
         </p>
-
-        <AnimatePresence>
-          {saveMessage ? (
-            <motion.div
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4"
-              exit={{ opacity: 0, y: -10 }}
-              initial={{ opacity: 0, y: 10 }}
-            >
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" />
-                {saveMessage}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          Required fields are marked with <span className="text-rose-500">*</span>
+        </p>
 
         <AnimatePresence>
           {errorMessage ? (
@@ -160,25 +251,31 @@ export function RFQCreateScreen() {
 
         {!permissions.canCreateRfq ? (
           <div className="mt-6 rounded-2xl border border-gold-500/25 bg-gold-500/10 p-4 text-sm leading-relaxed text-gold-700 dark:text-gold-200">
-            Your role does not have permission to stage RFQ drafts. Switch to an operational role.
+            Your role does not have permission to create RFQs. Switch to an operational role.
           </div>
         ) : null}
 
         <div className="mt-8 grid gap-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="rfq-title">RFQ Title</Label>
+              <FieldLabel htmlFor="rfq-title" required>
+                RFQ Title
+              </FieldLabel>
               <Input
                 id="rfq-title"
                 onChange={(event) => setTitle(event.target.value)}
+                required
                 value={title}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rfq-client">Client</Label>
+              <FieldLabel htmlFor="rfq-client" required>
+                Client
+              </FieldLabel>
               <Input
                 id="rfq-client"
                 onChange={(event) => setClient(event.target.value)}
+                required
                 value={client}
               />
             </div>
@@ -186,46 +283,103 @@ export function RFQCreateScreen() {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="rfq-owner">Owner</Label>
+              <FieldLabel htmlFor="rfq-owner" required>
+                Owner
+              </FieldLabel>
               <Input
                 id="rfq-owner"
                 onChange={(event) => setOwner(event.target.value)}
+                required
                 value={owner}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rfq-due-date">Due Date</Label>
+              <FieldLabel htmlFor="rfq-due-date" required>
+                Due Date
+              </FieldLabel>
               <Input
                 id="rfq-due-date"
-                onChange={(event) => setDueDate(event.target.value)}
+                min={minimumFeasibleDueDateIso ?? todayIso}
+                onChange={(event) => {
+                  setErrorMessage("");
+                  setDueDate(event.target.value);
+                }}
+                required
                 type="date"
                 value={dueDate}
               />
+              {minimumFeasibleDueDateIso ? (
+                <p
+                  className={`text-xs ${
+                    dueDateTooNarrow ? "text-rose-600 dark:text-rose-300" : "text-muted-foreground"
+                  }`}
+                >
+                  {dueDateTooNarrow
+                    ? buildWorkflowDeadlineTooNarrowMessage(minimumFeasibleDueDateIso)
+                    : `Selected workflow requires ${formatWorkflowDeadlineIso(minimumFeasibleDueDateIso)} or later.`}
+                </p>
+              ) : null}
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="rfq-industry">Industry</Label>
-              <Input
+              <FieldLabel htmlFor="rfq-industry" required>
+                Industry
+              </FieldLabel>
+              <select
+                className={selectClassName}
                 id="rfq-industry"
-                onChange={(event) => setIndustry(event.target.value)}
-                value={industry}
-              />
+                onChange={(event) => {
+                  setErrorMessage("");
+                  setSelectedIndustryOption(event.target.value as IndustryOption);
+                }}
+                required
+                value={selectedIndustryOption}
+              >
+                {industryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rfq-country">Country</Label>
+              <FieldLabel htmlFor="rfq-country" required>
+                Country
+              </FieldLabel>
               <Input
                 id="rfq-country"
                 onChange={(event) => setCountry(event.target.value)}
+                required
                 value={country}
               />
             </div>
           </div>
 
+          {selectedIndustryOption === OTHER_INDUSTRY_OPTION ? (
+            <div className="space-y-2">
+              <FieldLabel htmlFor="rfq-custom-industry" required>
+                Custom Industry
+              </FieldLabel>
+              <Input
+                id="rfq-custom-industry"
+                onChange={(event) => {
+                  setErrorMessage("");
+                  setCustomIndustry(event.target.value);
+                }}
+                placeholder="Enter the industry"
+                required
+                value={customIndustry}
+              />
+            </div>
+          ) : null}
+
           {apiConfig.useMockData ? (
             <div className="space-y-2">
-              <Label htmlFor="rfq-value">Demo Estimated Value (SAR)</Label>
+              <FieldLabel htmlFor="rfq-value">
+                Demo Estimated Value (SAR)
+              </FieldLabel>
               <Input
                 id="rfq-value"
                 onChange={(event) => setValueSar(event.target.value)}
@@ -236,7 +390,7 @@ export function RFQCreateScreen() {
           ) : null}
 
           <div className="space-y-2">
-            <Label>Priority Level</Label>
+            <FieldLabel required>Priority Level</FieldLabel>
             <div className="flex flex-wrap gap-2">
               {priorities.map((option) => (
                 <Button
@@ -253,7 +407,9 @@ export function RFQCreateScreen() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rfq-summary">Description</Label>
+            <FieldLabel htmlFor="rfq-summary" isOptional>
+              Description
+            </FieldLabel>
             <Textarea
               id="rfq-summary"
               className="h-24 resize-none"
@@ -265,10 +421,7 @@ export function RFQCreateScreen() {
 
         <div className="mt-8 flex flex-wrap gap-3 border-t border-border pt-6">
           <Button disabled={saving || !permissions.canCreateRfq} size="lg" type="submit">
-            {saving ? "Staging Draft..." : "Stage Draft RFQ"}
-          </Button>
-          <Button size="lg" type="button" variant="secondary">
-            Demo Validation Notes
+            {saving ? "Creating RFQ..." : "Create RFQ"}
           </Button>
         </div>
       </form>
@@ -280,8 +433,11 @@ export function RFQCreateScreen() {
             Workflow configuration
           </div>
           <h2 className="mt-3 text-xl font-semibold text-foreground">
-            Select manager workflow shell
+            Select workflow <span className="text-rose-500">*</span>
           </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            The selected workflow is required and determines the stages generated immediately after create.
+          </p>
           <div className="mt-5 space-y-3">
             {workflows.map((workflow) => (
               <button
@@ -291,7 +447,10 @@ export function RFQCreateScreen() {
                     ? "border-primary/40 bg-primary/5"
                     : "border-border bg-card hover:bg-muted/40 dark:bg-white/[0.01] dark:hover:bg-white/[0.04]"
                 }`}
-                onClick={() => setSelectedWorkflowId(workflow.id)}
+                onClick={() => {
+                  setErrorMessage("");
+                  setSelectedWorkflowId(workflow.id);
+                }}
                 type="button"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">

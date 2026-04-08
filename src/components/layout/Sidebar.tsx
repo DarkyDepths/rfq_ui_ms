@@ -88,7 +88,7 @@ export function Sidebar() {
 
           return (
             <Link
-              key={item.href}
+              key={`${item.href}-${item.title}`}
               className={cn(
                 "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 sidebarCollapsed && "lg:justify-center lg:px-0",

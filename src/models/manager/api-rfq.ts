@@ -20,6 +20,8 @@ export interface ManagerApiRfqSummary {
   progress: number;
   deadline: string;
   current_stage_name?: string | null;
+  current_stage_blocker_status?: "Blocked" | null;
+  current_stage_blocker_reason_code?: string | null;
   workflow_name?: string | null;
 }
 
@@ -79,8 +81,8 @@ export interface ManagerApiCreateRfqInput {
   deadline: string;
   owner: string;
   workflow_id: string;
-  industry?: string;
-  country?: string;
+  industry: string;
+  country: string;
   priority: "normal" | "critical";
   description?: string;
 }
@@ -94,6 +96,9 @@ export interface ManagerApiUpdateRfqInput {
   deadline?: string;
   owner?: string;
   description?: string;
-  status?: ManagerApiRfqStatus;
   outcome_reason?: string;
+}
+
+export interface ManagerApiCancelRfqInput {
+  outcome_reason: string;
 }

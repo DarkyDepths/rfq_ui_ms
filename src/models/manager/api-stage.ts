@@ -54,11 +54,16 @@ export interface ManagerApiStageDetail extends ManagerApiStageSummary {
 }
 
 export interface ManagerApiStageUpdateInput {
-  progress?: number;
-  assigned_team?: string;
   captured_data?: Record<string, unknown>;
-  blocker_status?: "Blocked" | "Resolved";
-  blocker_reason_code?: string;
+  blocker_status?: "Blocked" | "Resolved" | null;
+  blocker_reason_code?: string | null;
+}
+
+export interface ManagerApiStageAdvanceInput {
+  confirm_no_go_cancel?: boolean;
+  terminal_outcome?: string;
+  lost_reason_code?: string;
+  outcome_reason?: string;
 }
 
 export interface ManagerApiStageNoteInput {
@@ -67,8 +72,8 @@ export interface ManagerApiStageNoteInput {
 
 export interface ManagerApiSubtaskCreateInput {
   name: string;
-  assigned_to?: string;
-  due_date?: string;
+  assigned_to: string;
+  due_date: string;
 }
 
 export interface ManagerApiSubtaskUpdateInput {

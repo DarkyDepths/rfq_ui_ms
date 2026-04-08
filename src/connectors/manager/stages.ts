@@ -7,6 +7,7 @@ import { managerRfqDetailResponses } from "@/demo/manager/rfqs";
 import { managerWorkflowResponses } from "@/demo/manager/workflows";
 import type {
   ManagerApiStageDetail,
+  ManagerApiStageAdvanceInput,
   ManagerApiStageListResponse,
   ManagerApiStageNoteInput,
   ManagerApiStageUpdateInput,
@@ -21,6 +22,7 @@ import type {
   SubtaskUpdateInput,
 } from "@/models/manager/rfq";
 import type {
+  StageAdvanceInput,
   StageProgressModel,
   StageTemplateModel,
   StageUpdateInput,
@@ -28,6 +30,7 @@ import type {
 } from "@/models/manager/stage";
 import {
   translateManagerStageDetailCollections,
+  translateManagerStageNote,
   translateManagerStageSummary,
   translateManagerStageWorkspace,
   translateManagerWorkflowStageTemplate,
@@ -36,9 +39,11 @@ import {
   translateStageUpdateInput,
 } from "@/translators/manager/stages";
 import { sleep } from "@/utils/async";
+import { formatDate } from "@/utils/format";
 
 export interface StageActionOptions {
   actorTeam?: string;
+  actorUserId?: string;
   actorUserName?: string;
 }
 
@@ -113,9 +118,10 @@ export async function getStageWorkspace(
 
 function buildActionOptions(
   options?: StageActionOptions,
-): Pick<ManagerRequestOptions, "actorTeam" | "actorUserName"> {
+): Pick<ManagerRequestOptions, "actorTeam" | "actorUserId" | "actorUserName"> {
   return {
     actorTeam: options?.actorTeam,
+    actorUserId: options?.actorUserId,
     actorUserName: options?.actorUserName,
   };
 }
@@ -143,6 +149,7 @@ export async function updateStage(
 export async function advanceStage(
   rfqId: string,
   stageId: string,
+  input: StageAdvanceInput = {},
   options?: StageActionOptions,
 ): Promise<StageWorkspaceModel> {
   const response = await requestManagerJson<ManagerApiStageDetail>(
@@ -150,6 +157,12 @@ export async function advanceStage(
     {
       ...buildActionOptions(options),
       method: "POST",
+      body: JSON.stringify({
+        confirm_no_go_cancel: input.confirmNoGoCancel,
+        terminal_outcome: input.terminalOutcome,
+        lost_reason_code: input.lostReasonCode,
+        outcome_reason: input.outcomeReason?.trim() || undefined,
+      } satisfies ManagerApiStageAdvanceInput),
     },
   );
 
@@ -176,12 +189,7 @@ export async function addStageNote(
     },
   );
 
-  return {
-    id: response.id,
-    author: response.user_name,
-    note: response.text,
-    createdLabel: response.created_at,
-  };
+  return translateManagerStageNote(response);
 }
 
 export async function uploadStageFile(
@@ -291,7 +299,8 @@ export async function listStageNotes(
       id: note.id,
       author: note.author,
       note: note.note,
-      createdLabel: note.createdAt.slice(0, 10),
+      createdAtValue: note.createdAt,
+      createdLabel: formatDate(note.createdAt),
       tone: note.tone,
     }));
   }

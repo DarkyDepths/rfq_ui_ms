@@ -1,8 +1,11 @@
 import type {
+  CancelRfqInput,
+  CreateRfqInput,
   ManagerRfqDetailResponse,
   ManagerRfqListItemResponse,
   ManagerRfqListResponse,
 } from "@/models/manager/rfq";
+import { managerWorkflowResponses } from "@/demo/manager/workflows";
 
 import {
   buildStageHistory,
@@ -16,7 +19,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     id: "RFQ-2026-0142",
     title: "Integrated Border Surveillance Power Upgrade",
     client: "Albassam Security Systems",
-    owner: "M. Rahman",
+    owner: "GHI Estimator",
     region: "Riyadh",
     valueSar: 18400000,
     dueDate: "2026-04-18",
@@ -41,7 +44,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     id: "RFQ-2026-0138",
     title: "Tactical Communications Shelter Retrofit",
     client: "GHI Field Systems",
-    owner: "A. Nasser",
+    owner: "GHI Estimator",
     region: "Eastern Province",
     valueSar: 6200000,
     dueDate: "2026-04-09",
@@ -66,7 +69,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     id: "RFQ-2026-0126",
     title: "Critical Facility Fiber Backbone Expansion",
     client: "National Grid Control",
-    owner: "L. Hamed",
+    owner: "GHI Estimator",
     region: "Dammam",
     valueSar: 9700000,
     dueDate: "2026-04-04",
@@ -93,7 +96,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     id: "RFQ-2026-0119",
     title: "Air Defense Maintenance Support Lots",
     client: "Regional Air Command",
-    owner: "S. Kareem",
+    owner: "GHI Estimator",
     region: "Jeddah",
     valueSar: 22500000,
     dueDate: "2026-03-17",
@@ -102,6 +105,8 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     workflowId: "workflow-strategic",
     workflowName: "Strategic Programs Review",
     status: "awarded",
+    outcomeReason:
+      "Awarded after a strong technical score and a clean delivery-risk posture against the customer timeline.",
     intelligenceState: "complete",
     priority: "critical",
     nextAction:
@@ -119,7 +124,7 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
     id: "RFQ-2026-0151",
     title: "Protected Mobility Diagnostics Toolkit",
     client: "Desert Mobility Command",
-    owner: "H. Farouk",
+    owner: "GHI Estimator",
     region: "Tabuk",
     valueSar: 4300000,
     dueDate: "2026-04-14",
@@ -139,6 +144,62 @@ const rfqRecords: ManagerRfqListItemResponse[] = [
       standardWorkflowStages,
       "review",
       "2026-03-30T12:05:00Z",
+    ),
+  },
+  {
+    id: "RFQ-2026-0107",
+    title: "National Command Center AV Modernization",
+    client: "Strategic Defense Authority",
+    owner: "GHI Estimator",
+    region: "Riyadh",
+    valueSar: 11300000,
+    dueDate: "2026-03-12",
+    createdAt: "2026-02-05",
+    updatedAt: "2026-03-20",
+    workflowId: "workflow-strategic",
+    workflowName: "Strategic Programs Review",
+    status: "lost",
+    outcomeReason:
+      "Lost on commercial competitiveness after the client selected a lower lead-time package with fewer compliance deviations.",
+    intelligenceState: "complete",
+    priority: "critical",
+    nextAction:
+      "Capture the commercial delta and feed the loss rationale into the next pursuit brief.",
+    summaryLine:
+      "Lost after commercial comparison; delivery lead-time and alternate compliance position were decisive.",
+    tags: ["Lost", "Leadership Review"],
+    stageHistory: buildStageHistory(
+      strategicWorkflowStages,
+      "award",
+      "2026-03-20T09:40:00Z",
+    ),
+  },
+  {
+    id: "RFQ-2026-0102",
+    title: "Coastal Security Tower Retrofit",
+    client: "Maritime Protection Authority",
+    owner: "GHI Estimator",
+    region: "Jubail",
+    valueSar: 7600000,
+    dueDate: "2026-03-06",
+    createdAt: "2026-01-29",
+    updatedAt: "2026-03-14",
+    workflowId: "workflow-standard",
+    workflowName: "Standard Bid Lifecycle",
+    status: "lost",
+    outcomeReason:
+      "Lost after the client weighted local supplier coverage and maintenance response commitments above price parity.",
+    intelligenceState: "complete",
+    priority: "high",
+    nextAction:
+      "Capture the service-coverage gap and feed it into the next coastal infrastructure pursuit.",
+    summaryLine:
+      "Loss review shows service coverage and maintenance response commitments were the deciding factors.",
+    tags: ["Lost", "Coverage Gap"],
+    stageHistory: buildStageHistory(
+      standardWorkflowStages,
+      "award",
+      "2026-03-14T11:20:00Z",
     ),
   },
 ];
@@ -195,6 +256,8 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
       ...rfqRecords[0],
       description:
         "Strategic RFQ covering resilient power distribution, UPS redundancy, and integration support for border surveillance nodes.",
+      industry: "Power",
+      country: "Saudi Arabia",
       procurementLead: "H. Alessa",
       estimatedSubmissionDate: "2026-04-14",
       stageNotes: [
@@ -221,6 +284,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0142_package.zip",
           type: "ZIP Intake",
           uploadedAt: "2026-03-28T08:04:00Z",
+          uploadedBy: "Estimation Manager",
           status: "processed",
         },
         {
@@ -228,6 +292,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0142_pricing_v3.xlsx",
           type: "Workbook",
           uploadedAt: "2026-03-29T16:40:00Z",
+          uploadedBy: "M. Rahman",
           status: "processed",
         },
       ],
@@ -277,6 +342,8 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
       ...rfqRecords[1],
       description:
         "Retrofit scope for tactical communications shelters including cooling upgrades, cable routing, and field power adjustments.",
+      industry: "Infrastructure",
+      country: "Saudi Arabia",
       procurementLead: "N. Tarek",
       estimatedSubmissionDate: "2026-04-07",
       stageNotes: [
@@ -295,6 +362,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0138_scope_package.zip",
           type: "ZIP Intake",
           uploadedAt: "2026-03-28T09:10:00Z",
+          uploadedBy: "GHI Estimator",
           status: "processed",
         },
       ],
@@ -335,6 +403,8 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
       ...rfqRecords[2],
       description:
         "Fiber backbone expansion with protected conduits, rack integration, and field commissioning documentation.",
+      industry: "Power",
+      country: "Saudi Arabia",
       procurementLead: "F. Madani",
       estimatedSubmissionDate: "2026-04-02",
       stageNotes: [
@@ -361,6 +431,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0126_design_package.zip",
           type: "ZIP Intake",
           uploadedAt: "2026-03-24T13:25:00Z",
+          uploadedBy: "L. Hamed",
           status: "processed",
         },
         {
@@ -368,6 +439,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0126_commercial_v2.xlsx",
           type: "Workbook",
           uploadedAt: "2026-03-30T18:05:00Z",
+          uploadedBy: "L. Hamed",
           status: "rejected",
         },
       ],
@@ -410,6 +482,8 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
       ...rfqRecords[3],
       description:
         "Awarded maintenance support program spanning spare lots, field support, and scheduled servicing packs.",
+      industry: "Industrial Systems",
+      country: "Saudi Arabia",
       procurementLead: "S. Kareem",
       estimatedSubmissionDate: "2026-03-12",
       stageNotes: [
@@ -428,6 +502,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0119_award_package.zip",
           type: "ZIP Intake",
           uploadedAt: "2026-03-10T08:05:00Z",
+          uploadedBy: "S. Kareem",
           status: "processed",
         },
         {
@@ -435,6 +510,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0119_final_award.xlsx",
           type: "Workbook",
           uploadedAt: "2026-03-11T17:20:00Z",
+          uploadedBy: "S. Kareem",
           status: "processed",
         },
       ],
@@ -470,6 +546,8 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
       ...rfqRecords[4],
       description:
         "Diagnostic toolkit bid covering ruggedized test kits, calibration support, and field integration accessories.",
+      industry: "Defense Systems",
+      country: "Saudi Arabia",
       procurementLead: "J. Osman",
       estimatedSubmissionDate: "2026-04-11",
       stageNotes: [
@@ -488,6 +566,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0151_diagnostics.zip",
           type: "ZIP Intake",
           uploadedAt: "2026-03-27T15:15:00Z",
+          uploadedBy: "GHI Estimator",
           status: "processed",
         },
         {
@@ -495,6 +574,7 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
           label: "rfq_0151_pricing_draft.xlsx",
           type: "Workbook",
           uploadedAt: "2026-03-30T10:18:00Z",
+          uploadedBy: "GHI Estimator",
           status: "pending",
         },
       ],
@@ -533,4 +613,323 @@ export const managerRfqDetailResponses: Record<string, ManagerRfqDetailResponse>
         },
       ],
     },
+    "RFQ-2026-0107": {
+      ...rfqRecords[5],
+      description:
+        "Modernization bid for audiovisual integration, resilient command displays, and operator-room fit-out across the national command center estate.",
+      industry: "Infrastructure",
+      country: "Saudi Arabia",
+      outcomeReason:
+        "Lost on commercial competitiveness after the client selected a lower lead-time package with fewer compliance deviations.",
+      procurementLead: "Estimation Manager",
+      estimatedSubmissionDate: "2026-03-10",
+      stageNotes: [
+        {
+          id: "note-107-1",
+          stageId: "award",
+          author: "Commercial Review",
+          note: "Loss review confirmed that delivery lead-time and alternate compliance exceptions outweighed technical quality scoring.",
+          createdAt: "2026-03-20T09:40:00Z",
+          tone: "warning",
+        },
+      ],
+      recentFiles: [
+        {
+          id: "file-107-zip",
+          label: "rfq_0107_command_center.zip",
+          type: "ZIP Intake",
+          uploadedAt: "2026-03-02T08:30:00Z",
+          uploadedBy: "Estimation Manager",
+          status: "processed",
+        },
+        {
+          id: "file-107-workbook",
+          label: "rfq_0107_final_offer.xlsx",
+          type: "Workbook",
+          uploadedAt: "2026-03-09T18:10:00Z",
+          uploadedBy: "Estimation Manager",
+          status: "processed",
+        },
+      ],
+      subtasks: [
+        {
+          id: "task-107-1",
+          label: "Publish commercial loss review",
+          owner: "Commercial Manager",
+          dueDate: "2026-03-24",
+          state: "done",
+        },
+      ],
+      uploads: [
+        {
+          kind: "zip",
+          title: "Upload RFQ Package ZIP",
+          description: "Reference package retained for lessons-learned review.",
+          status: "ready",
+          fileName: "rfq_0107_command_center.zip",
+          uploadedAt: "2026-03-02T08:30:00Z",
+        },
+        {
+          kind: "workbook",
+          title: "Upload Pricing Workbook",
+          description: "Final offer workbook retained for post-mortem comparison.",
+          status: "ready",
+          fileName: "rfq_0107_final_offer.xlsx",
+          uploadedAt: "2026-03-09T18:10:00Z",
+        },
+      ],
+    },
+    "RFQ-2026-0102": {
+      id: "RFQ-2026-0102",
+      title: "Coastal Security Tower Retrofit",
+      client: "Maritime Protection Authority",
+      owner: "GHI Estimator",
+      region: "Jubail",
+      industry: "Marine / Offshore",
+      country: "Saudi Arabia",
+      valueSar: 7600000,
+      dueDate: "2026-03-06",
+      createdAt: "2026-01-29",
+      updatedAt: "2026-03-14",
+      workflowId: "workflow-standard",
+      workflowName: "Standard Bid Lifecycle",
+      status: "lost",
+      outcomeReason:
+        "Lost after the client weighted local supplier coverage and maintenance response commitments above price parity.",
+      intelligenceState: "complete",
+      priority: "high",
+      nextAction:
+        "Capture the service-coverage gap and feed it into the next coastal infrastructure pursuit.",
+      summaryLine:
+        "Loss review shows service coverage and maintenance response commitments were the deciding factors.",
+      tags: ["Lost", "Coverage Gap"],
+      stageHistory: buildStageHistory(
+        standardWorkflowStages,
+        "award",
+        "2026-03-14T11:20:00Z",
+      ),
+      description:
+        "Retrofit bid for coastal observation towers covering ruggedized communications, power refresh, and maintenance support packs.",
+      procurementLead: "Estimation Manager",
+      estimatedSubmissionDate: "2026-03-05",
+      stageNotes: [
+        {
+          id: "note-102-1",
+          stageId: "award",
+          author: "Commercial Review",
+          note: "Client feedback highlighted maintenance response commitments and local service coverage as the main differentiators.",
+          createdAt: "2026-03-14T11:20:00Z",
+          tone: "warning",
+        },
+      ],
+      recentFiles: [
+        {
+          id: "file-102-zip",
+          label: "rfq_0102_coastal_package.zip",
+          type: "ZIP Intake",
+          uploadedAt: "2026-02-26T08:12:00Z",
+          uploadedBy: "Estimation Manager",
+          status: "processed",
+        },
+        {
+          id: "file-102-workbook",
+          label: "rfq_0102_service_offer.xlsx",
+          type: "Workbook",
+          uploadedAt: "2026-03-04T17:45:00Z",
+          uploadedBy: "Estimation Manager",
+          status: "processed",
+        },
+      ],
+      subtasks: [
+        {
+          id: "task-102-1",
+          label: "Document service-coverage lesson learned",
+          owner: "Capture Team",
+          dueDate: "2026-03-18",
+          state: "done",
+        },
+      ],
+      uploads: [
+        {
+          kind: "zip",
+          title: "Upload RFQ Package ZIP",
+          description: "Reference package preserved for future pursuit reviews.",
+          status: "ready",
+          fileName: "rfq_0102_coastal_package.zip",
+          uploadedAt: "2026-02-26T08:12:00Z",
+        },
+        {
+          kind: "workbook",
+          title: "Upload Pricing Workbook",
+          description: "Workbook retained for service-model comparison.",
+          status: "ready",
+          fileName: "rfq_0102_service_offer.xlsx",
+          uploadedAt: "2026-03-04T17:45:00Z",
+        },
+      ],
+    },
   };
+
+function getLocalDateIsoString(baseDate = new Date()) {
+  const year = baseDate.getFullYear();
+  const month = `${baseDate.getMonth() + 1}`.padStart(2, "0");
+  const day = `${baseDate.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNextDemoRfqId() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const maxSequence = managerRfqListResponse.items.reduce((highest, rfq) => {
+    const match = /^RFQ-(\d{4})-(\d{4})$/.exec(rfq.id);
+    if (!match) {
+      return highest;
+    }
+
+    const [, year, sequence] = match;
+    if (Number.parseInt(year, 10) !== currentYear) {
+      return highest;
+    }
+
+    return Math.max(highest, Number.parseInt(sequence, 10));
+  }, 0);
+
+  return `RFQ-${currentYear}-${String(maxSequence + 1).padStart(4, "0")}`;
+}
+
+export function createDemoRfq(
+  input: CreateRfqInput,
+): ManagerRfqDetailResponse {
+  const workflow = managerWorkflowResponses.find(
+    (candidate) => candidate.id === input.workflowId,
+  );
+
+  if (!workflow) {
+    throw new Error(`Workflow '${input.workflowId}' not found in demo mode.`);
+  }
+
+  const now = new Date();
+  const createdDate = getLocalDateIsoString(now);
+  const createdTimestamp = now.toISOString();
+  const firstStage = workflow.stages[0];
+  const nextStage = workflow.stages[1];
+  const rfqId = getNextDemoRfqId();
+
+  const listItem: ManagerRfqListItemResponse = {
+    id: rfqId,
+    title: input.name,
+    client: input.client,
+    owner: input.owner,
+    region: input.country ?? "Not specified",
+    valueSar: 0,
+    dueDate: input.deadline,
+    createdAt: createdDate,
+    updatedAt: createdDate,
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    status: "in_preparation",
+    intelligenceState: "pending",
+    priority: input.priority,
+    nextAction: nextStage
+      ? `Prepare ${nextStage.label.toLowerCase()} after intake alignment.`
+      : "Kick off the first workflow stage.",
+    summaryLine:
+      "RFQ created successfully. Workflow stages were generated and the lifecycle started in preparation.",
+    tags: ["New RFQ"],
+    stageHistory: buildStageHistory(workflow.stages, firstStage.id, createdTimestamp),
+  };
+
+  const detail: ManagerRfqDetailResponse = {
+    ...listItem,
+    description: input.description ?? "",
+    industry: input.industry,
+    country: input.country,
+    procurementLead: input.owner,
+    estimatedSubmissionDate: input.deadline,
+    stageNotes: [],
+    recentFiles: [],
+    subtasks: [],
+    uploads: [
+      {
+        kind: "zip",
+        title: "Upload RFQ Package ZIP",
+        description: "Stage the RFQ package to start intelligence and workspace enrichment.",
+        status: "missing",
+      },
+      {
+        kind: "workbook",
+        title: "Upload Pricing Workbook",
+        description: "Add the pricing workbook when the package is ready for working review.",
+        status: "missing",
+      },
+    ],
+  };
+
+  managerRfqListResponse.items.unshift(listItem);
+  managerRfqDetailResponses[rfqId] = detail;
+
+  return detail;
+}
+
+export function updateDemoRfq(
+  rfqId: string,
+  input: Partial<CreateRfqInput> & {
+    outcomeReason?: string;
+    status?: ManagerRfqDetailResponse["status"];
+  },
+): ManagerRfqDetailResponse {
+  const detail = managerRfqDetailResponses[rfqId];
+  if (!detail) {
+    throw new Error(`RFQ '${rfqId}' not found in demo mode.`);
+  }
+
+  const normalizedUpdatedAt = new Date().toISOString();
+  const normalizedUpdatedDate = normalizedUpdatedAt.slice(0, 10);
+
+  const updatedDetail: ManagerRfqDetailResponse = {
+    ...detail,
+    title: input.name ?? detail.title,
+    client: input.client ?? detail.client,
+    owner: input.owner ?? detail.owner,
+    dueDate: input.deadline ?? detail.dueDate,
+    updatedAt: normalizedUpdatedDate,
+    status: input.status ?? detail.status,
+    outcomeReason: input.outcomeReason ?? detail.outcomeReason,
+    priority: input.priority ?? detail.priority,
+    description: input.description ?? detail.description,
+    industry: input.industry ?? detail.industry,
+    country: input.country ?? detail.country,
+  };
+
+  managerRfqDetailResponses[rfqId] = updatedDetail;
+
+  const listIndex = managerRfqListResponse.items.findIndex((item) => item.id === rfqId);
+  if (listIndex >= 0) {
+    managerRfqListResponse.items[listIndex] = {
+      ...managerRfqListResponse.items[listIndex],
+      title: updatedDetail.title,
+      client: updatedDetail.client,
+      owner: updatedDetail.owner,
+      dueDate: updatedDetail.dueDate,
+      updatedAt: normalizedUpdatedDate,
+      status: updatedDetail.status,
+      outcomeReason: updatedDetail.outcomeReason,
+      priority: updatedDetail.priority,
+      region:
+        updatedDetail.country ??
+        managerRfqListResponse.items[listIndex].region,
+    };
+  }
+
+  return updatedDetail;
+}
+
+export function cancelDemoRfq(
+  rfqId: string,
+  input: CancelRfqInput,
+): ManagerRfqDetailResponse {
+  return updateDemoRfq(rfqId, {
+    outcomeReason: input.outcomeReason,
+    status: "cancelled",
+  });
+}

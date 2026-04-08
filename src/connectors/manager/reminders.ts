@@ -18,16 +18,32 @@ import {
   translateManagerReminderStats,
 } from "@/translators/manager/reminders";
 
-export async function getRfqReminders(
-  rfqId: string,
+interface ReminderListFilters {
+  rfqId?: string;
+  status?: string;
+  user?: string;
+}
+
+export async function listReminders(
+  filters: ReminderListFilters = {},
 ): Promise<ReminderModel[]> {
   const response = await requestManagerJson<ManagerApiReminderListResponse>(
     "/reminders",
     undefined,
-    { rfq_id: rfqId },
+    {
+      rfq_id: filters.rfqId,
+      status: filters.status,
+      user: filters.user,
+    },
   );
 
   return response.data.map(translateManagerReminder);
+}
+
+export async function getRfqReminders(
+  rfqId: string,
+): Promise<ReminderModel[]> {
+  return listReminders({ rfqId });
 }
 
 export async function getReminderStats(): Promise<ReminderStatsModel> {
@@ -61,6 +77,17 @@ export async function createReminder(
         due_date: input.dueDate,
         assigned_to: input.assignedTo,
       } satisfies ManagerApiReminderCreateInput),
+    },
+  );
+}
+
+export async function resolveReminder(
+  reminderId: string,
+): Promise<void> {
+  await requestManagerJson(
+    `/reminders/${reminderId}/resolve`,
+    {
+      method: "POST",
     },
   );
 }

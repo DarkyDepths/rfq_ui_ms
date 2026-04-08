@@ -2,23 +2,13 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  getReminderRules,
-  getReminderStats,
-  getRfqReminders,
-} from "@/connectors/manager/reminders";
-import type {
-  ReminderModel,
-  ReminderRuleModel,
-  ReminderStatsModel,
-} from "@/models/manager/rfq";
+import { getRfqReminders } from "@/connectors/manager/reminders";
+import type { ReminderModel } from "@/models/manager/rfq";
 
 interface ReminderState {
   error: string | null;
   loading: boolean;
   reminders: ReminderModel[];
-  rules: ReminderRuleModel[];
-  stats: ReminderStatsModel | null;
 }
 
 export function useRfqReminders(rfqId: string) {
@@ -27,8 +17,6 @@ export function useRfqReminders(rfqId: string) {
     error: null,
     loading: true,
     reminders: [],
-    rules: [],
-    stats: null,
   });
 
   useEffect(() => {
@@ -42,11 +30,7 @@ export function useRfqReminders(rfqId: string) {
 
     async function load() {
       try {
-        const [reminders, stats, rules] = await Promise.all([
-          getRfqReminders(rfqId),
-          getReminderStats(),
-          getReminderRules(),
-        ]);
+        const reminders = await getRfqReminders(rfqId);
 
         if (!active) {
           return;
@@ -56,8 +40,6 @@ export function useRfqReminders(rfqId: string) {
           error: null,
           loading: false,
           reminders,
-          rules,
-          stats,
         });
       } catch (error) {
         if (!active) {
@@ -71,8 +53,6 @@ export function useRfqReminders(rfqId: string) {
               : "Reminders could not be loaded.",
           loading: false,
           reminders: [],
-          rules: [],
-          stats: null,
         });
       }
     }

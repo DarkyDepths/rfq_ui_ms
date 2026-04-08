@@ -2,6 +2,11 @@ export interface ManagerApiReminder {
   id: string;
   rfq_id: string;
   rfq_stage_id?: string | null;
+  rfq_code?: string | null;
+  rfq_name?: string | null;
+  rfq_deadline?: string | null;
+  rfq_stage_name?: string | null;
+  source: "manual" | "automatic";
   type: "internal" | "external";
   message: string;
   due_date: string;
