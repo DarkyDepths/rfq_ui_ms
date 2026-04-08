@@ -5,6 +5,7 @@ import { ArrowUpDown, CalendarDays, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
+import { LifecycleProgressStageBox } from "@/components/rfq/LifecycleProgressStageBox";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -132,9 +133,15 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
                 </div>
               </TableCell>
               <TableCell className="py-4">
-                <div className="text-sm font-medium text-foreground">{item.stageLabel}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {item.nextAction ?? `Progress ${item.stageProgress}%`}
+                <LifecycleProgressStageBox
+                  blocked={blockedSignal.isBlocked}
+                  compact
+                  rfqProgress={item.rfqProgress}
+                  stageLabel={item.stageLabel}
+                  status={item.status}
+                />
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {item.nextAction ?? `Lifecycle ${item.rfqProgress}%`}
                 </div>
                 {blockedSignal.isBlocked ? (
                   <div className="mt-1 text-[0.68rem] font-medium text-rose-700 dark:text-rose-300">

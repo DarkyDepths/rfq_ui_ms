@@ -136,7 +136,7 @@ function buildExecutiveAttentionItems(
             rfq.summaryLine ??
             `Blocked in ${blockedStage.label}. Review the RFQ detail for blocker diagnosis and escalation context.`,
           rfq,
-          score: 420 + rfq.stageProgress + (waitingOnManager ? 60 : 0),
+          score: 420 + rfq.rfqProgress + (waitingOnManager ? 60 : 0),
           signalLabel: `Blocked in ${blockedStage.label}`,
           tone: "rose" as const,
         };

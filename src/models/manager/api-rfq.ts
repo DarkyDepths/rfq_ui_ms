@@ -81,6 +81,7 @@ export interface ManagerApiCreateRfqInput {
   deadline: string;
   owner: string;
   workflow_id: string;
+  skip_stages?: string[];
   industry: string;
   country: string;
   priority: "normal" | "critical";

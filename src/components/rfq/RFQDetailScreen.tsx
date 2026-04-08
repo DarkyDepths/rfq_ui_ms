@@ -12,6 +12,7 @@ import { IntelligenceActionsPanel } from "@/components/intelligence/Intelligence
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
 import { ExecutiveStrategicDetail } from "@/components/rfq/ExecutiveStrategicDetail";
 import { LeadershipNotesPanel } from "@/components/rfq/LeadershipNotesPanel";
+import { LifecycleProgressStageBox } from "@/components/rfq/LifecycleProgressStageBox";
 import { RfqOperationalWorkspace } from "@/components/rfq/RfqOperationalWorkspace";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
@@ -237,18 +238,22 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
 
         {rfq.stageHistory.length > 0 ? (
           <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-            <div className="mb-2 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <span>{rfq.stageLabel}</span>
-              <span className="font-mono">{rfq.stageProgress}%</span>
+            <LifecycleProgressStageBox
+              rfqProgress={rfq.rfqProgress}
+              stageLabel={rfq.stageLabel}
+              status={rfq.status}
+            />
+            <div className="mt-3">
+              <RFQStageTimeline stages={rfq.stageHistory} />
             </div>
-            <RFQStageTimeline stages={rfq.stageHistory} />
           </div>
         ) : (
           <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-foreground">{rfq.stageLabel}</span>
-              <span className="font-mono text-sm text-muted-foreground">{rfq.stageProgress}%</span>
-            </div>
+            <LifecycleProgressStageBox
+              rfqProgress={rfq.rfqProgress}
+              stageLabel={rfq.stageLabel}
+              status={rfq.status}
+            />
           </div>
         )}
 

@@ -808,11 +808,30 @@ export function createDemoRfq(
     throw new Error(`Workflow '${input.workflowId}' not found in demo mode.`);
   }
 
+  if ((input.skipStageIds?.length ?? 0) > 0 && workflow.selectionMode !== "customizable") {
+    throw new Error("Stage selection is only allowed for customizable workflows.");
+  }
+
+  const skippedRequiredStage = workflow.stages.find(
+    (stage) => stage.isRequired && (input.skipStageIds ?? []).includes(stage.id),
+  );
+  if (skippedRequiredStage) {
+    throw new Error("Required workflow stages cannot be removed.");
+  }
+
+  const selectedStages = workflow.stages.filter(
+    (stage) => !(input.skipStageIds ?? []).includes(stage.id),
+  );
+
+  if (selectedStages.length === 0) {
+    throw new Error("Customized workflow must keep at least one stage.");
+  }
+
   const now = new Date();
   const createdDate = getLocalDateIsoString(now);
   const createdTimestamp = now.toISOString();
-  const firstStage = workflow.stages[0];
-  const nextStage = workflow.stages[1];
+  const firstStage = selectedStages[0];
+  const nextStage = selectedStages[1];
   const rfqId = getNextDemoRfqId();
 
   const listItem: ManagerRfqListItemResponse = {
@@ -836,7 +855,11 @@ export function createDemoRfq(
     summaryLine:
       "RFQ created successfully. Workflow stages were generated and the lifecycle started in preparation.",
     tags: ["New RFQ"],
-    stageHistory: buildStageHistory(workflow.stages, firstStage.id, createdTimestamp),
+    stageHistory: buildStageHistory(
+      selectedStages,
+      firstStage.id,
+      createdTimestamp,
+    ),
   };
 
   const detail: ManagerRfqDetailResponse = {

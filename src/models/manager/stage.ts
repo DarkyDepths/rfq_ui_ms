@@ -21,6 +21,7 @@ export interface ManagerStageTemplateResponse {
   summary: string;
   ownerRole: AppRole | "shared";
   plannedDurationDays?: number;
+  isRequired?: boolean;
 }
 
 export interface ManagerStageStatusResponse
@@ -37,6 +38,7 @@ export interface StageTemplateModel {
   ownerRole?: AppRole | "shared";
   assignedTeam?: string;
   plannedDurationDays?: number;
+  isRequired?: boolean;
 }
 
 export interface StageProgressModel extends StageTemplateModel {

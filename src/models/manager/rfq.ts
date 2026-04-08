@@ -215,7 +215,7 @@ export interface RfqCardModel {
   summaryLine?: string;
   tags: string[];
   stageLabel: string;
-  stageProgress: number;
+  rfqProgress: number;
   stageHistory: StageProgressModel[];
   blockerStatus?: "Blocked";
   blockerReasonCode?: string;
@@ -241,6 +241,7 @@ export interface CreateRfqInput {
   client: string;
   owner: string;
   workflowId: string;
+  skipStageIds?: string[];
   deadline: string;
   priority: "normal" | "critical";
   description?: string;

@@ -312,6 +312,7 @@ export async function createRfq(
       name: input.name,
       owner: input.owner,
       priority: input.priority,
+      skip_stages: input.skipStageIds,
       workflow_id: input.workflowId,
     } satisfies ManagerApiCreateRfqInput),
   });

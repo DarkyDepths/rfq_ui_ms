@@ -32,6 +32,12 @@ import {
   getLocalDateIsoString,
   getMinimumWorkflowFeasibleDeadlineIso,
 } from "@/utils/workflow-deadline";
+import {
+  buildSelectedWorkflow,
+  buildSkipStageIds,
+  getInitialSelectedWorkflowStageIds,
+  isCustomizableWorkflow,
+} from "@/utils/workflow-selection";
 
 const priorities = ["normal", "critical"] as const;
 const selectClassName =
@@ -76,6 +82,7 @@ export function RFQCreateScreen() {
   const [loading, setLoading] = useState(true);
   const [workflows, setWorkflows] = useState<WorkflowModel[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
+  const [selectedStageIds, setSelectedStageIds] = useState<string[]>([]);
   const [title, setTitle] = useState("Structured Power Redundancy Upgrade");
   const [client, setClient] = useState("GHI Strategic Systems");
   const [owner, setOwner] = useState(actorProfile.userName);
@@ -133,10 +140,44 @@ export function RFQCreateScreen() {
   const selectedWorkflow = workflows.find(
     (workflow) => workflow.id === selectedWorkflowId,
   );
+  const selectedWorkflowForCreate = buildSelectedWorkflow(
+    selectedWorkflow,
+    selectedStageIds,
+  );
+  const selectedWorkflowStages = selectedWorkflowForCreate?.stages ?? [];
+  const selectedWorkflowIsCustomizable = isCustomizableWorkflow(selectedWorkflow);
   const minimumFeasibleDueDateIso =
-    getMinimumWorkflowFeasibleDeadlineIso(selectedWorkflow);
+    getMinimumWorkflowFeasibleDeadlineIso(selectedWorkflowForCreate);
   const dueDateTooNarrow =
     minimumFeasibleDueDateIso !== null && dueDate < minimumFeasibleDueDateIso;
+
+  useEffect(() => {
+    setSelectedStageIds(getInitialSelectedWorkflowStageIds(selectedWorkflow));
+  }, [selectedWorkflow]);
+
+  const handleWorkflowStageToggle = (stageId: string) => {
+    if (!selectedWorkflow || !selectedWorkflowIsCustomizable) {
+      return;
+    }
+
+    const stage = selectedWorkflow.stages.find((candidate) => candidate.id === stageId);
+    if (!stage || stage.isRequired) {
+      return;
+    }
+
+    setSelectedStageIds((current) => {
+      const next = new Set(current);
+      if (next.has(stageId)) {
+        next.delete(stageId);
+      } else {
+        next.add(stageId);
+      }
+
+      return selectedWorkflow.stages
+        .filter((candidate) => next.has(candidate.id))
+        .map((candidate) => candidate.id);
+    });
+  };
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -171,6 +212,13 @@ export function RFQCreateScreen() {
       return;
     }
 
+    if (!selectedWorkflowForCreate || selectedWorkflowForCreate.stages.length === 0) {
+      setErrorMessage(
+        "Select at least one workflow stage before creating this RFQ.",
+      );
+      return;
+    }
+
     if (dueDate < todayIso) {
       setErrorMessage("Due date cannot be in the past.");
       return;
@@ -195,6 +243,7 @@ export function RFQCreateScreen() {
         name: normalizedTitle,
         owner: normalizedOwner,
         priority,
+        skipStageIds: buildSkipStageIds(selectedWorkflow, selectedStageIds),
         workflowId: selectedWorkflow.id,
       });
 
@@ -467,6 +516,18 @@ export function RFQCreateScreen() {
                     {workflow.stageCount}s
                   </div>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+                  <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 dark:bg-white/[0.04]">
+                    {(workflow.selectionMode ?? "fixed") === "customizable"
+                      ? "Customizable"
+                      : "Fixed"}
+                  </span>
+                  {workflow.code ? (
+                    <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 dark:bg-white/[0.04]">
+                      {workflow.code}
+                    </span>
+                  ) : null}
+                </div>
                 {workflow.recommendedUse || workflow.code ? (
                   <div className="mt-3 text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">
@@ -478,6 +539,60 @@ export function RFQCreateScreen() {
               </button>
             ))}
           </div>
+
+          {selectedWorkflow && selectedWorkflowIsCustomizable ? (
+            <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-4 dark:bg-white/[0.02]">
+              <h3 className="text-sm font-semibold text-foreground">
+                Choose workflow stages
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                GHI customized workflow starts from the long workflow catalog. Required stages stay locked; optional stages are included only when selected.
+              </p>
+              <div className="mt-4 space-y-3">
+                {selectedWorkflow.stages.map((stage) => {
+                  const checked = selectedStageIds.includes(stage.id);
+                  return (
+                    <label
+                      key={stage.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors ${
+                        checked
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-border bg-card hover:bg-muted/40 dark:bg-white/[0.01] dark:hover:bg-white/[0.04]"
+                      } ${stage.isRequired ? "cursor-not-allowed" : ""}`}
+                    >
+                      <input
+                        checked={checked}
+                        className="mt-1 h-4 w-4 rounded border-border"
+                        disabled={stage.isRequired}
+                        onChange={() => {
+                          setErrorMessage("");
+                          handleWorkflowStageToggle(stage.id);
+                        }}
+                        type="checkbox"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {stage.label}
+                          </span>
+                          {stage.isRequired ? (
+                            <span className="rounded-full border border-gold-500/30 bg-gold-500/10 px-2 py-0.5 text-[0.62rem] font-medium uppercase tracking-[0.18em] text-gold-700 dark:text-gold-200">
+                              Required
+                            </span>
+                          ) : null}
+                        </div>
+                        {stage.summary ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {stage.summary}
+                          </div>
+                        ) : null}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="surface-panel p-6">
@@ -487,8 +602,13 @@ export function RFQCreateScreen() {
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             The workflow dictates lifecycle visibility and operational progression through the manager service.
           </p>
+          {selectedWorkflowIsCustomizable ? (
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Preview shows only the stages that will be instantiated for this RFQ.
+            </p>
+          ) : null}
           <div className="mt-5 space-y-3 border-l border-border pl-4">
-            {selectedWorkflow?.stages.map((stage) => (
+            {selectedWorkflowStages.map((stage) => (
               <div key={stage.id} className="relative">
                 <div className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-border" />
                 <div className="flex items-center justify-between gap-2">
@@ -502,6 +622,11 @@ export function RFQCreateScreen() {
                 ) : null}
               </div>
             ))}
+            {selectedWorkflow && selectedWorkflowStages.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                Select at least one stage to generate a customized workflow.
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
