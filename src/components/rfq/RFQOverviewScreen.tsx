@@ -7,8 +7,8 @@ import { ArrowRight, PlusSquare, Radar } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { KPICard } from "@/components/common/KPICard";
+import { ReminderCenterSummaryCard } from "@/components/reminders/ReminderCenterSummaryCard";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
-import { ReminderCenterPanel } from "@/components/reminders/ReminderCenterPanel";
 import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
 import { Badge } from "@/components/ui/badge";
@@ -240,7 +240,7 @@ export function RFQOverviewScreen() {
         )}
       </section>
 
-      {role === "manager" ? <ReminderCenterPanel permissions={permissions} /> : null}
+      {role === "manager" ? <ReminderCenterSummaryCard /> : null}
     </div>
   );
 }

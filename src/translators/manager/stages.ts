@@ -47,6 +47,7 @@ export function translateStageTemplate(
     summary: stage.summary,
     ownerRole: stage.ownerRole,
     plannedDurationDays: stage.plannedDurationDays,
+    isRequired: stage.isRequired,
   };
 }
 
@@ -143,6 +144,7 @@ export function translateManagerWorkflowStageTemplate(
     }`,
     assignedTeam: stage.default_team ?? undefined,
     plannedDurationDays: stage.planned_duration_days,
+    isRequired: stage.is_required ?? false,
   };
 }
 

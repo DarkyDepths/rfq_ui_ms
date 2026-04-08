@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { IntelligencePanel } from "@/components/intelligence/IntelligencePanel";
+import { LifecycleProgressStageBox } from "@/components/rfq/LifecycleProgressStageBox";
 import { LeadershipNotesPanel } from "@/components/rfq/LeadershipNotesPanel";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
@@ -388,17 +389,20 @@ export function ExecutiveStrategicDetail({
 
         {rfq.stageHistory.length > 0 ? (
           <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-            <div className="mb-2 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <span>{rfq.stageLabel}</span>
-              <span className="font-mono">{rfq.stageProgress}%</span>
+            <LifecycleProgressStageBox
+              rfqProgress={rfq.rfqProgress}
+              stageLabel={rfq.stageLabel}
+              status={rfq.status}
+            />
+            <div className="mt-3">
+              <RFQStageTimeline stages={rfq.stageHistory} />
             </div>
-            <RFQStageTimeline stages={rfq.stageHistory} />
           </div>
         ) : null}
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <StrategicSignalCard
-            detail={`${rfq.stageProgress}% through workflow${rfq.estimatedSubmissionLabel ? ` · Estimated submission ${rfq.estimatedSubmissionLabel}` : ""}.`}
+            detail={`${rfq.rfqProgress}% through lifecycle${rfq.estimatedSubmissionLabel ? ` · Estimated submission ${rfq.estimatedSubmissionLabel}` : ""}.`}
             label="Current Stage"
             tone="steel"
             value={rfq.stageLabel}

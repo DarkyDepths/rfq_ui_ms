@@ -56,6 +56,14 @@ export const primaryNavigation: NavigationItem[] = [
     match: "prefix",
   },
   {
+    title: "Reminder Center",
+    href: "/reminders",
+    description: "Manager-owned reminder rules, batch actions, and service-wide reminder visibility.",
+    icon: "folder-kanban",
+    roles: ["manager"],
+    match: "exact",
+  },
+  {
     title: "Create RFQ",
     href: "/rfqs/new",
     description: "Workflow-based intake shell for new RFQ creation.",

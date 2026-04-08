@@ -4,6 +4,7 @@ export interface ManagerApiWorkflowStageTemplate {
   order: number;
   default_team?: string | null;
   planned_duration_days: number;
+  is_required?: boolean;
 }
 
 export interface ManagerApiWorkflowSummary {
@@ -13,6 +14,8 @@ export interface ManagerApiWorkflowSummary {
   stage_count: number;
   is_active: boolean;
   is_default: boolean;
+  selection_mode?: "fixed" | "customizable";
+  base_workflow_id?: string | null;
 }
 
 export interface ManagerApiWorkflowListResponse {

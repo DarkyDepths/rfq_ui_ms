@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Building2, MapPinned, User2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+import { LifecycleProgressStageBox } from "@/components/rfq/LifecycleProgressStageBox";
 import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
@@ -91,20 +92,24 @@ export function RFQCard({
 
           {rfq.stageHistory.length > 0 ? (
             <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-              <div className="mb-2 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                <span>{rfq.stageLabel}</span>
-                <span className="font-mono">{rfq.stageProgress}%</span>
+              <LifecycleProgressStageBox
+                blocked={blockedSignal.isBlocked}
+                rfqProgress={rfq.rfqProgress}
+                stageLabel={rfq.stageLabel}
+                status={rfq.status}
+              />
+              <div className="mt-3">
+                <RFQStageTimeline compact stages={rfq.stageHistory} />
               </div>
-              <RFQStageTimeline compact stages={rfq.stageHistory} />
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 dark:bg-white/[0.02]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-foreground">{rfq.stageLabel}</div>
-                <div className="font-mono text-sm text-muted-foreground">
-                  {rfq.stageProgress}%
-                </div>
-              </div>
+              <LifecycleProgressStageBox
+                blocked={blockedSignal.isBlocked}
+                rfqProgress={rfq.rfqProgress}
+                stageLabel={rfq.stageLabel}
+                status={rfq.status}
+              />
               {blockedSignal.isBlocked ? (
                 <div className="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300">
                   {blockedSignal.reasonLabel
@@ -135,7 +140,7 @@ export function RFQCard({
               </div>
             </div>
             <div className="max-w-[12rem] text-right text-sm font-medium text-primary">
-              {rfq.nextAction ?? `Progress ${rfq.stageProgress}%`}
+              {rfq.nextAction ?? `Lifecycle ${rfq.rfqProgress}%`}
             </div>
           </div>
         </div>

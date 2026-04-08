@@ -10,8 +10,20 @@ const overviewSource = await readFile(
   path.join(process.cwd(), "src", "components", "rfq", "RFQOverviewScreen.tsx"),
   "utf8",
 );
+const summaryCardSource = await readFile(
+  path.join(process.cwd(), "src", "components", "reminders", "ReminderCenterSummaryCard.tsx"),
+  "utf8",
+);
 const centerPanelSource = await readFile(
   path.join(process.cwd(), "src", "components", "reminders", "ReminderCenterPanel.tsx"),
+  "utf8",
+);
+const centerScreenSource = await readFile(
+  path.join(process.cwd(), "src", "components", "reminders", "ReminderCenterScreen.tsx"),
+  "utf8",
+);
+const remindersPageSource = await readFile(
+  path.join(process.cwd(), "src", "app", "(dashboard)", "reminders", "page.tsx"),
   "utf8",
 );
 const reminderDialogSource = await readFile(
@@ -24,6 +36,14 @@ const rfqHookSource = await readFile(
 );
 const centerHookSource = await readFile(
   path.join(process.cwd(), "src", "hooks", "use-reminder-center.ts"),
+  "utf8",
+);
+const summaryHookSource = await readFile(
+  path.join(process.cwd(), "src", "hooks", "use-reminder-summary.ts"),
+  "utf8",
+);
+const navigationSource = await readFile(
+  path.join(process.cwd(), "src", "config", "navigation.ts"),
   "utf8",
 );
 const permissionsSource = await readFile(
@@ -51,7 +71,13 @@ assert.ok(!workspaceSource.includes("Portfolio Reminder Service"));
 assert.ok(!workspaceSource.includes("Process Due"));
 assert.ok(!workspaceSource.includes("Test Email"));
 
-assert.ok(overviewSource.includes("ReminderCenterPanel"));
+assert.ok(overviewSource.includes("ReminderCenterSummaryCard"));
+assert.ok(!overviewSource.includes("<ReminderCenterPanel"));
+
+assert.ok(summaryCardSource.includes("Reminder Snapshot"));
+assert.ok(summaryCardSource.includes("Open Reminder Center"));
+assert.ok(!summaryCardSource.includes("Run Batch Now"));
+assert.ok(!summaryCardSource.includes("Reminder Rules"));
 
 assert.ok(centerPanelSource.includes("Reminder Center"));
 assert.ok(centerPanelSource.includes("Run Batch Now"));
@@ -65,6 +91,10 @@ assert.ok(centerPanelSource.includes("overdue first"));
 assert.ok(centerPanelSource.includes("View details"));
 assert.ok(centerPanelSource.includes("getReminderTypeLabel(reminder.type)"));
 
+assert.ok(centerScreenSource.includes("ReminderCenterPanel"));
+assert.ok(centerScreenSource.includes('role !== "manager"'));
+assert.ok(remindersPageSource.includes("ReminderCenterScreen"));
+
 assert.ok(rfqHookSource.includes("getRfqReminders"));
 assert.ok(!rfqHookSource.includes("getReminderStats"));
 assert.ok(!rfqHookSource.includes("getReminderRules"));
@@ -72,6 +102,13 @@ assert.ok(!rfqHookSource.includes("getReminderRules"));
 assert.ok(centerHookSource.includes("listReminders"));
 assert.ok(centerHookSource.includes("getReminderStats"));
 assert.ok(centerHookSource.includes("getReminderRules"));
+assert.ok(summaryHookSource.includes("getReminderStats"));
+assert.ok(!summaryHookSource.includes("getReminderRules"));
+assert.ok(!summaryHookSource.includes("listReminders"));
+
+assert.ok(navigationSource.includes("Reminder Center"));
+assert.ok(navigationSource.includes('href: "/reminders"'));
+assert.ok(navigationSource.includes('roles: ["manager"]'));
 
 assert.ok(permissionsSource.includes('"reminder:update"'));
 assert.ok(reminderDialogSource.includes("Reminder Detail"));

@@ -73,13 +73,28 @@ function getActiveStage(item: ManagerRfqListItemResponse) {
   );
 }
 
-function calculateStageProgress(item: ManagerRfqListItemResponse) {
-  const activeStage = getActiveStage(item);
-  if (!activeStage) {
-    return 0;
+function calculateLifecycleProgress(item: ManagerRfqListItemResponse) {
+  if (
+    item.status === "awarded" ||
+    item.status === "lost" ||
+    item.status === "cancelled"
+  ) {
+    return 100;
   }
 
-  return Math.round((activeStage.order / item.stageHistory.length) * 100);
+  const effectiveStages = item.stageHistory.filter((stage) => stage.state !== "skipped");
+  if (effectiveStages.length === 0) {
+    return 100;
+  }
+
+  const completedStages = effectiveStages.filter(
+    (stage) => stage.state === "completed",
+  );
+  if (completedStages.length === effectiveStages.length) {
+    return 100;
+  }
+
+  return Math.floor((completedStages.length / effectiveStages.length) * 100);
 }
 
 export function translateRfqCard(
@@ -110,7 +125,7 @@ export function translateRfqCard(
     summaryLine: item.summaryLine,
     tags: item.tags,
     stageLabel: activeStage?.label ?? "Unassigned",
-    stageProgress: calculateStageProgress(item),
+    rfqProgress: calculateLifecycleProgress(item),
     stageHistory,
     blockerStatus: blockedStage ? "Blocked" : undefined,
     blockerReasonCode: blockedStage?.blockerReasonCode,
@@ -266,7 +281,7 @@ export function translateManagerRfqCard(
     priority: item.priority,
     tags: [],
     stageLabel: item.current_stage_name ?? "No active stage",
-    stageProgress: item.progress,
+    rfqProgress: item.progress,
     stageHistory: [],
     blockerStatus: isBlocked ? "Blocked" : undefined,
     blockerReasonCode: isBlocked

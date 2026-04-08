@@ -20,8 +20,11 @@ export function translateWorkflow(
   return {
     id: workflow.id,
     name: workflow.name,
+    code: workflow.code,
     description: workflow.description,
     recommendedUse: workflow.recommendedUse,
+    selectionMode: workflow.selectionMode ?? "fixed",
+    baseWorkflowId: workflow.baseWorkflowId ?? null,
     turnaroundDays:
       getWorkflowPlannedDurationDays({
         ...workflow,
@@ -52,6 +55,8 @@ export function translateManagerWorkflowSummary(
     stageCount: workflow.stage_count,
     isActive: workflow.is_active,
     isDefault: workflow.is_default,
+    selectionMode: workflow.selection_mode ?? "fixed",
+    baseWorkflowId: workflow.base_workflow_id ?? null,
     stages: [],
   };
 }
