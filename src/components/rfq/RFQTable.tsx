@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import type { RfqCardModel } from "@/models/manager/rfq";
+import { getRfqBlockedSignal } from "@/utils/blocker-signal";
 
 type SortField = "client" | "due" | "status";
 type SortDirection = "asc" | "desc";
@@ -95,14 +97,17 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedItems.map((item, index) => (
-            <motion.tr
-              key={item.id}
-              animate={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 14 }}
-              transition={{ duration: 0.35, delay: 0.1 + index * 0.03 }}
-              className="border-b border-border transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.03]"
-            >
+          {sortedItems.map((item, index) => {
+            const blockedSignal = getRfqBlockedSignal(item);
+
+            return (
+              <motion.tr
+                key={item.id}
+                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 14 }}
+                transition={{ duration: 0.35, delay: 0.1 + index * 0.03 }}
+                className="border-b border-border transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.03]"
+              >
               <TableCell className="py-4">
                 <div>
                   <div className="font-semibold text-foreground">{item.title}</div>
@@ -116,6 +121,9 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
               <TableCell className="py-4">
                 <div className="flex flex-col gap-1.5 items-start">
                   <RFQStatusChip status={item.status} />
+                  {blockedSignal.isBlocked ? (
+                    <Badge variant="rose">Blocked</Badge>
+                  ) : null}
                   {item.intelligenceState ? (
                     <div className="text-[0.68rem] font-medium text-muted-foreground">
                       Intel: {item.intelligenceState}
@@ -128,6 +136,13 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {item.nextAction ?? `Progress ${item.stageProgress}%`}
                 </div>
+                {blockedSignal.isBlocked ? (
+                  <div className="mt-1 text-[0.68rem] font-medium text-rose-700 dark:text-rose-300">
+                    {blockedSignal.reasonLabel
+                      ? `Blocked: ${blockedSignal.reasonLabel}`
+                      : "Blocked"}
+                  </div>
+                ) : null}
               </TableCell>
               <TableCell className="py-4 font-mono text-sm">{item.dueLabel}</TableCell>
               <TableCell className="py-4 text-right">
@@ -138,8 +153,9 @@ export function RFQTable({ items }: { items: RfqCardModel[] }) {
                   </Link>
                 </Button>
               </TableCell>
-            </motion.tr>
-          ))}
+              </motion.tr>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

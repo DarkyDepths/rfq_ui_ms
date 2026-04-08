@@ -21,6 +21,20 @@ import type {
   StageUpdateInput,
   StageWorkspaceModel,
 } from "@/models/manager/stage";
+import {
+  isControlledStageDecisionField,
+  normalizeControlledStageDecisionValue,
+} from "@/utils/go-no-go";
+import {
+  isLifecycleHistorySupportField,
+  parseLifecycleHistoryEvents,
+} from "@/utils/lifecycle-history";
+import {
+  isLostReasonCodeField,
+  isTerminalOutcomeField,
+  normalizeLostReasonCode,
+  normalizeTerminalOutcomeValue,
+} from "@/utils/terminal-outcome";
 import { formatDate } from "@/utils/format";
 
 export function translateStageTemplate(
@@ -32,6 +46,7 @@ export function translateStageTemplate(
     order: stage.order,
     summary: stage.summary,
     ownerRole: stage.ownerRole,
+    plannedDurationDays: stage.plannedDurationDays,
   };
 }
 
@@ -55,8 +70,12 @@ function resolveStageProgressState(
 
   const normalized = status.trim().toLowerCase();
 
-  if (normalized === "completed" || normalized === "skipped") {
+  if (normalized === "completed") {
     return "completed";
+  }
+
+  if (normalized === "skipped") {
+    return "skipped";
   }
 
   if (normalized === "in progress") {
@@ -64,6 +83,28 @@ function resolveStageProgressState(
   }
 
   return "upcoming";
+}
+
+function resolveBlockerStatus(
+  blockerStatus?: string | null,
+): "Blocked" | "Resolved" | undefined {
+  return blockerStatus === "Blocked" || blockerStatus === "Resolved"
+    ? blockerStatus
+    : undefined;
+}
+
+function resolveBlockerReasonCode(
+  blockerStatus?: string | null,
+  blockerReasonCode?: string | null,
+) {
+  const normalizedStatus = resolveBlockerStatus(blockerStatus);
+  const normalizedReason = blockerReasonCode?.trim();
+
+  if (!normalizedStatus || !normalizedReason) {
+    return undefined;
+  }
+
+  return normalizedReason;
 }
 
 function resolveStageTimestamp(stage: ManagerApiStageSummary) {
@@ -118,7 +159,10 @@ export function translateManagerStageSummary(
     timestampLabel: resolveStageTimestamp(stage),
     progress: stage.progress,
     statusLabel: stage.status,
-    blockerReasonCode: stage.blocker_reason_code ?? undefined,
+    blockerReasonCode: resolveBlockerReasonCode(
+      stage.blocker_status,
+      stage.blocker_reason_code,
+    ),
   };
 }
 
@@ -129,6 +173,7 @@ export function translateManagerStageNote(
     id: note.id,
     author: note.user_name,
     note: note.text,
+    createdAtValue: note.created_at,
     createdLabel: formatDate(note.created_at),
   };
 }
@@ -192,11 +237,41 @@ export function translateManagerStageWorkspace(
     .split(",")
     .map((field) => field.trim())
     .filter(Boolean);
+  const lifecycleEvents = parseLifecycleHistoryEvents(
+    stage.captured_data?.workflow_history_events,
+  );
 
   const capturedData = Object.entries(stage.captured_data ?? {}).reduce<Record<string, string>>(
     (accumulator, [key, value]) => {
-      accumulator[key] =
-        typeof value === "string" ? value : JSON.stringify(value);
+      if (isLifecycleHistorySupportField(key)) {
+        return accumulator;
+      }
+
+      if (isControlledStageDecisionField(key)) {
+        accumulator[key] = normalizeControlledStageDecisionValue(
+          key,
+          typeof value === "boolean" || typeof value === "string"
+            ? value
+            : String(value ?? ""),
+        );
+        return accumulator;
+      }
+
+      if (isTerminalOutcomeField(key)) {
+        accumulator[key] = normalizeTerminalOutcomeValue(
+          typeof value === "string" ? value : String(value ?? ""),
+        );
+        return accumulator;
+      }
+
+      if (isLostReasonCodeField(key)) {
+        accumulator[key] = normalizeLostReasonCode(
+          typeof value === "string" ? value : String(value ?? ""),
+        );
+        return accumulator;
+      }
+
+      accumulator[key] = typeof value === "string" ? value : JSON.stringify(value);
       return accumulator;
     },
     {},
@@ -217,13 +292,14 @@ export function translateManagerStageWorkspace(
     state: resolveStageProgressState(stage.status, stage.blocker_status),
     progress: stage.progress,
     statusLabel: stage.status,
-    blockerStatus:
-      stage.blocker_status === "Blocked" || stage.blocker_status === "Resolved"
-        ? stage.blocker_status
-        : undefined,
-    blockerReasonCode: stage.blocker_reason_code ?? undefined,
+    blockerStatus: resolveBlockerStatus(stage.blocker_status),
+    blockerReasonCode: resolveBlockerReasonCode(
+      stage.blocker_status,
+      stage.blocker_reason_code,
+    ),
     capturedData,
     mandatoryFields,
+    lifecycleEvents,
     plannedStartValue: stage.planned_start ?? undefined,
     plannedStartLabel: stage.planned_start ? formatDate(stage.planned_start) : undefined,
     plannedEndValue: stage.planned_end ?? undefined,
@@ -241,6 +317,33 @@ export function translateStageUpdateInput(
   const captured_data = input.capturedData
     ? Object.entries(input.capturedData).reduce<Record<string, unknown>>(
         (accumulator, [key, value]) => {
+          if (isControlledStageDecisionField(key)) {
+            const normalizedDecision = normalizeControlledStageDecisionValue(
+              key,
+              value,
+            );
+            if (normalizedDecision) {
+              accumulator[key] = normalizedDecision;
+            }
+            return accumulator;
+          }
+
+          if (isTerminalOutcomeField(key)) {
+            const normalizedOutcome = normalizeTerminalOutcomeValue(value);
+            if (normalizedOutcome) {
+              accumulator[key] = normalizedOutcome;
+            }
+            return accumulator;
+          }
+
+          if (isLostReasonCodeField(key)) {
+            const normalizedLostReason = normalizeLostReasonCode(value);
+            if (normalizedLostReason) {
+              accumulator[key] = normalizedLostReason;
+            }
+            return accumulator;
+          }
+
           const trimmed = value.trim();
 
           if (!trimmed) {
@@ -274,11 +377,23 @@ export function translateStageUpdateInput(
       )
     : undefined;
 
+  const hasBlockerStatus = Object.prototype.hasOwnProperty.call(
+    input,
+    "blockerStatus",
+  );
+  const hasBlockerReasonCode = Object.prototype.hasOwnProperty.call(
+    input,
+    "blockerReasonCode",
+  );
+  const blockerStatus = input.blockerStatus;
+  const blockerReasonCode = blockerStatus
+    ? input.blockerReasonCode?.trim() || null
+    : null;
+
   return {
-    progress: input.progress,
-    assigned_team: input.assignedTeam,
     captured_data,
-    blocker_status: input.blockerStatus,
-    blocker_reason_code: input.blockerReasonCode,
+    blocker_status: hasBlockerStatus ? blockerStatus ?? null : undefined,
+    blocker_reason_code:
+      hasBlockerStatus || hasBlockerReasonCode ? blockerReasonCode : undefined,
   };
 }

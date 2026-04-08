@@ -6,6 +6,7 @@ import { RFQStageTimeline } from "@/components/rfq/RFQStageTimeline";
 import { RFQStatusChip } from "@/components/rfq/RFQStatusChip";
 import { Badge } from "@/components/ui/badge";
 import type { RfqCardModel } from "@/models/manager/rfq";
+import { getRfqBlockedSignal } from "@/utils/blocker-signal";
 
 export function RFQCard({
   rfq,
@@ -14,6 +15,8 @@ export function RFQCard({
   rfq: RfqCardModel;
   index?: number;
 }) {
+  const blockedSignal = getRfqBlockedSignal(rfq);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -33,6 +36,9 @@ export function RFQCard({
             </div>
             <div className="flex items-center gap-2">
               <RFQStatusChip status={rfq.status} />
+              {blockedSignal.isBlocked ? (
+                <Badge variant="rose">Blocked</Badge>
+              ) : null}
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </div>
@@ -61,6 +67,16 @@ export function RFQCard({
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
+            {blockedSignal.isBlocked ? (
+              <Badge variant="rose" className="border-transparent">
+                Blocked
+              </Badge>
+            ) : null}
+            {blockedSignal.reasonLabel ? (
+              <Badge variant="gold" className="border-transparent">
+                {blockedSignal.reasonLabel}
+              </Badge>
+            ) : null}
             {rfq.intelligenceState ? (
               <Badge variant="steel" className="opacity-80 border-transparent">
                 Intel: {rfq.intelligenceState}
@@ -89,6 +105,13 @@ export function RFQCard({
                   {rfq.stageProgress}%
                 </div>
               </div>
+              {blockedSignal.isBlocked ? (
+                <div className="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+                  {blockedSignal.reasonLabel
+                    ? `Blocked: ${blockedSignal.reasonLabel}`
+                    : "Blocked: blocker reason required"}
+                </div>
+              ) : null}
             </div>
           )}
 

@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+
 import { RFQListScreen } from "@/components/rfq/RFQListScreen";
 
 export default function RfqsPage() {
-  return <RFQListScreen />;
+  return (
+    <Suspense fallback={null}>
+      <RFQListScreen />
+    </Suspense>
+  );
 }

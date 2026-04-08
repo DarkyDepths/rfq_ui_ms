@@ -8,7 +8,7 @@ import type {
   ReminderRuleModel,
   ReminderStatsModel,
 } from "@/models/manager/rfq";
-import { formatDate } from "@/utils/format";
+import { formatDate, formatDateTime } from "@/utils/format";
 
 export function translateManagerReminder(
   reminder: ManagerApiReminder,
@@ -17,6 +17,11 @@ export function translateManagerReminder(
     id: reminder.id,
     rfqId: reminder.rfq_id,
     rfqStageId: reminder.rfq_stage_id ?? undefined,
+    rfqCode: reminder.rfq_code ?? undefined,
+    rfqName: reminder.rfq_name ?? undefined,
+    rfqDeadlineValue: reminder.rfq_deadline ?? undefined,
+    rfqStageName: reminder.rfq_stage_name ?? undefined,
+    source: reminder.source,
     type: reminder.type,
     message: reminder.message,
     dueDateValue: reminder.due_date,
@@ -25,9 +30,12 @@ export function translateManagerReminder(
     delayDays: reminder.delay_days,
     assignedTo: reminder.assigned_to ?? undefined,
     createdBy: reminder.created_by ?? undefined,
-    createdLabel: formatDate(reminder.created_at),
-    updatedLabel: reminder.updated_at ? formatDate(reminder.updated_at) : undefined,
-    lastSentLabel: reminder.last_sent_at ? formatDate(reminder.last_sent_at) : undefined,
+    createdAtValue: reminder.created_at,
+    createdLabel: formatDateTime(reminder.created_at),
+    updatedAtValue: reminder.updated_at ?? undefined,
+    updatedLabel: reminder.updated_at ? formatDateTime(reminder.updated_at) : undefined,
+    lastSentAtValue: reminder.last_sent_at ?? undefined,
+    lastSentLabel: reminder.last_sent_at ? formatDateTime(reminder.last_sent_at) : undefined,
     sendCount: reminder.send_count,
   };
 }

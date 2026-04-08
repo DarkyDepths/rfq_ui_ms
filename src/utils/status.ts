@@ -5,6 +5,9 @@ import type {
 import type { IntelligenceAvailabilityState } from "@/models/intelligence/snapshot";
 import type { ManagerRfqStatus } from "@/models/manager/rfq";
 
+export const terminalRfqStatuses = ["awarded", "lost", "cancelled"] as const;
+const terminalRfqStatusSet = new Set<ManagerRfqStatus>(terminalRfqStatuses);
+
 export const rfqStatusMeta: Record<
   ManagerRfqStatus,
   {
@@ -142,4 +145,12 @@ export function getAccentForArtifact(kind: ArtifactKind) {
     default:
       return "steel";
   }
+}
+
+export function isTerminalRfqStatus(status: ManagerRfqStatus) {
+  return terminalRfqStatusSet.has(status);
+}
+
+export function isActiveRfqStatus(status: ManagerRfqStatus) {
+  return status !== "draft" && !isTerminalRfqStatus(status);
 }

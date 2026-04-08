@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, PlusSquare, Radar } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { KPICard } from "@/components/common/KPICard";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
+import { ReminderCenterPanel } from "@/components/reminders/ReminderCenterPanel";
 import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +20,23 @@ import { useOverviewData } from "@/hooks/use-overview-data";
 
 export function RFQOverviewScreen() {
   const { role } = useRole();
-  const { error, loading, metrics, rfqs } = useOverviewData();
   const permissions = getPermissions(role);
+  const router = useRouter();
+  const { activeRfqs, error, loading, metrics, rfqs } = useOverviewData(role, permissions);
 
   const displayRfqs = permissions.canViewAllRfqs ? rfqs : rfqs.slice(0, 3);
-  const featuredCards = displayRfqs.slice(0, 3);
+  const featuredCards = activeRfqs.slice(0, 3);
+
+  if (role === "executive") {
+    return (
+      <EmptyState
+        actionLabel="Open Dashboard"
+        description="Executive access stays on the dashboard and strategic RFQ monitor rather than the operational overview."
+        onAction={() => router.push("/dashboard")}
+        title="Operational overview is manager-owned"
+      />
+    );
+  }
 
   if (error) {
     return (
@@ -65,7 +79,7 @@ export function RFQOverviewScreen() {
             <Button asChild size="lg" variant="secondary">
               <Link href="/rfqs">
                 <Radar className="h-4 w-4" />
-                Open Queue
+                {role === "manager" ? "Open Queue" : "Open Worklist"}
               </Link>
             </Button>
           )}
@@ -111,9 +125,15 @@ export function RFQOverviewScreen() {
             </div>
           ) : (
             <div className="space-y-4">
-              {featuredCards.map((rfq, index) => (
-                <RFQCard key={rfq.id} index={index} rfq={rfq} />
-              ))}
+              {featuredCards.length > 0 ? (
+                featuredCards.map((rfq, index) => (
+                  <RFQCard key={rfq.id} index={index} rfq={rfq} />
+                ))
+              ) : (
+                <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  No active RFQs are currently available in this overview slice.
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -132,26 +152,35 @@ export function RFQOverviewScreen() {
               <div className="surface-panel p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="section-kicker">
-                      <Radar className="h-3.5 w-3.5" />
-                      Executive BI
-                    </div>
-                    <h2 className="mt-3 text-lg font-semibold text-foreground">
-                      Dashboard Access
-                    </h2>
-                  </div>
+                <div className="section-kicker">
+                  <Radar className="h-3.5 w-3.5" />
+                      {role === "manager" ? "Executive BI" : "Assignments Focus"}
                 </div>
+                <h2 className="mt-3 text-lg font-semibold text-foreground">
+                      {role === "manager" ? "Dashboard Access" : "Contributor Focus"}
+                </h2>
+              </div>
+            </div>
 
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  The full intelligence posture, timeline tracking, and portfolio readiness overview have been moved to the primary Dashboard view.
+                  {role === "manager"
+                    ? "The full intelligence posture, timeline tracking, and portfolio readiness overview have been moved to the primary Dashboard view."
+                    : "Your overview stays centered on assigned RFQs and contributor actions. Portfolio analytics remain outside estimator scope."}
                 </p>
 
                 <div className="mt-6">
                   <Button asChild variant="secondary">
-                    <Link href="/dashboard">
-                      Open Dashboard
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
+                    {role === "manager" ? (
+                      <Link href="/dashboard">
+                        Open Dashboard
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    ) : (
+                      <Link href="/rfqs">
+                        Open Worklist
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -184,13 +213,13 @@ export function RFQOverviewScreen() {
             <div className="surface-panel p-5">
               <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Badge variant={role === "manager" ? "steel" : "gold"}>
-                  {role === "manager" ? "Manager View" : "Worker View"}
+                  {role === "manager" ? "Manager View" : "Estimator View"}
                 </Badge>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 {role === "manager"
                   ? "You see the operational portfolio queue and can create or advance RFQs. For macro intelligence, view the Dashboard."
-                  : "You see assigned RFQs with pending actions. Portfolio controls are manager-owned."}
+                  : "You see assigned RFQs and own drafts. Stage truth, reminders, and portfolio controls remain manager-owned."}
               </p>
             </div>
           </motion.div>
@@ -210,6 +239,8 @@ export function RFQOverviewScreen() {
           <RFQTable items={displayRfqs} />
         )}
       </section>
+
+      {role === "manager" ? <ReminderCenterPanel permissions={permissions} /> : null}
     </div>
   );
 }

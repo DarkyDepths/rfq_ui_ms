@@ -15,6 +15,42 @@ export interface RequestOptions extends RequestInit {
   authToken?: string;
 }
 
+async function resolveErrorMessage(response: Response) {
+  const contentType = response.headers.get("Content-Type") ?? "";
+  const responseText = (await response.text()).trim();
+
+  if (contentType.includes("application/json")) {
+    const payload = responseText
+      ? (() => {
+          try {
+            return JSON.parse(responseText);
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+    if (payload && typeof payload === "object") {
+      if (
+        "message" in payload &&
+        typeof payload.message === "string" &&
+        payload.message.trim().length > 0
+      ) {
+        return payload.message;
+      }
+
+      if (
+        "detail" in payload &&
+        typeof payload.detail === "string" &&
+        payload.detail.trim().length > 0
+      ) {
+        return payload.detail;
+      }
+    }
+  }
+
+  return responseText || `Request failed with status ${response.status}`;
+}
+
 export async function requestJson<T>(
   input: string,
   init?: RequestOptions,
@@ -41,7 +77,7 @@ export async function requestJson<T>(
   });
 
   if (!response.ok) {
-    const message = (await response.text()) || `Request failed with status ${response.status}`;
+    const message = await resolveErrorMessage(response);
     throw new HttpError(response.status, message);
   }
 

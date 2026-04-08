@@ -33,6 +33,7 @@ import {
   formatDate,
   formatPercent,
 } from "@/utils/format";
+import { resolveEstimatedSubmissionDateValue } from "@/utils/estimated-submission";
 import { rfqStatusMeta } from "@/utils/status";
 
 function resolveMetricValue(metric: ManagerMetricResponse) {
@@ -64,6 +65,10 @@ function getActiveStage(item: ManagerRfqListItemResponse) {
   return (
     item.stageHistory.find((stage) => stage.state === "active") ??
     item.stageHistory.find((stage) => stage.state === "blocked") ??
+    [...item.stageHistory]
+      .reverse()
+      .find((stage) => stage.state !== "upcoming" && stage.state !== "skipped") ??
+    item.stageHistory.find((stage) => stage.state === "skipped") ??
     item.stageHistory[item.stageHistory.length - 1]
   );
 }
@@ -81,12 +86,16 @@ export function translateRfqCard(
   item: ManagerRfqListItemResponse,
 ): RfqCardModel {
   const activeStage = getActiveStage(item);
+  const stageHistory = item.stageHistory.map(translateStageProgress);
+  const blockedStage = stageHistory.find((stage) => stage.state === "blocked");
 
   return {
     id: item.id,
+    rfqCode: item.id,
     title: item.title,
     client: item.client,
     owner: item.owner,
+    workflowId: item.workflowId,
     region: item.region,
     workflowName: item.workflowName,
     valueLabel: formatCompactCurrency(item.valueSar),
@@ -94,6 +103,7 @@ export function translateRfqCard(
     dueLabel: formatDate(item.dueDate),
     status: item.status,
     statusLabel: rfqStatusMeta[item.status].label,
+    outcomeReason: item.outcomeReason,
     intelligenceState: item.intelligenceState,
     priority: item.priority,
     nextAction: item.nextAction,
@@ -101,7 +111,11 @@ export function translateRfqCard(
     tags: item.tags,
     stageLabel: activeStage?.label ?? "Unassigned",
     stageProgress: calculateStageProgress(item),
-    stageHistory: item.stageHistory.map(translateStageProgress),
+    stageHistory,
+    blockerStatus: blockedStage ? "Blocked" : undefined,
+    blockerReasonCode: blockedStage?.blockerReasonCode,
+    updatedAtValue: item.updatedAt,
+    updatedAtLabel: formatDate(item.updatedAt),
   };
 }
 
@@ -112,6 +126,7 @@ function translateStageNote(
     id: note.id,
     author: note.author,
     note: note.note,
+    createdAtValue: note.createdAt,
     createdLabel: formatDate(note.createdAt),
     tone: note.tone,
   };
@@ -125,6 +140,7 @@ function translateRecentFile(
     label: file.label,
     type: file.type,
     uploadedLabel: formatDate(file.uploadedAt),
+    uploadedBy: file.uploadedBy,
     status: file.status,
   };
 }
@@ -162,6 +178,8 @@ export function translateRfqDetail(
   return {
     ...card,
     description: item.description,
+    industry: item.industry,
+    outcomeReason: item.outcomeReason,
     procurementLead: item.procurementLead,
     estimatedSubmissionLabel: formatDate(item.estimatedSubmissionDate),
     stageNotes: item.stageNotes.map(translateStageNote),
@@ -231,6 +249,7 @@ export function translateManagerRfqCard(
   item: ManagerApiRfqSummary,
 ): RfqCardModel {
   const status = normalizeManagerStatus(item.status);
+  const isBlocked = item.current_stage_blocker_status === "Blocked";
 
   return {
     id: item.id,
@@ -249,6 +268,10 @@ export function translateManagerRfqCard(
     stageLabel: item.current_stage_name ?? "No active stage",
     stageProgress: item.progress,
     stageHistory: [],
+    blockerStatus: isBlocked ? "Blocked" : undefined,
+    blockerReasonCode: isBlocked
+      ? item.current_stage_blocker_reason_code ?? undefined
+      : undefined,
   };
 }
 
@@ -259,14 +282,29 @@ export function translateManagerRfqDetail(
 ): RfqDetailModel {
   const shell = translateManagerRfqCard(detail);
   const stageCollections = translateManagerStageDetailCollections(currentStage);
+  const stageHistory = stages.map(translateManagerStageSummary);
+  const blockedStage =
+    stageHistory.find((stage) => stage.state === "blocked")
+    ?? (currentStage ? translateManagerStageSummary(currentStage) : null);
 
   return {
     ...shell,
+    workflowId: detail.workflow_id,
     workflowName: detail.workflow_name ?? shell.workflowName,
     description: detail.description ?? undefined,
+    industry: detail.industry ?? undefined,
     currentStageId: detail.current_stage_id ?? null,
     outcomeReason: detail.outcome_reason ?? undefined,
-    stageHistory: stages.map(translateManagerStageSummary),
+    stageHistory,
+    blockerStatus:
+      blockedStage?.state === "blocked" ? "Blocked" : shell.blockerStatus,
+    blockerReasonCode:
+      blockedStage?.state === "blocked"
+        ? blockedStage.blockerReasonCode
+        : shell.blockerReasonCode,
+    estimatedSubmissionLabel: formatDate(
+      resolveEstimatedSubmissionDateValue(stages, detail.deadline),
+    ),
     updatedAtValue: detail.updated_at,
     updatedAtLabel: formatDate(detail.updated_at),
     stageNotes: stageCollections.notes,

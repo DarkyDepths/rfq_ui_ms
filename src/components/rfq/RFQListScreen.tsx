@@ -1,21 +1,133 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutGrid, ListFilter, PlusSquare, Search } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { LayoutGrid, ListFilter, PlusSquare, Search, Sparkles } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { RFQCard } from "@/components/rfq/RFQCard";
 import { RFQTable } from "@/components/rfq/RFQTable";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
 import { useRfqList } from "@/hooks/use-rfq-list";
+import type { RfqCardModel } from "@/models/manager/rfq";
+import type {
+  RfqMonitorLeadershipFilter,
+  RfqMonitorSignalFilter,
+} from "@/lib/executive-insights";
+
+function parseStatusFilter(value: string | null): "all" | RfqCardModel["status"] {
+  switch (value) {
+    case "draft":
+    case "in_preparation":
+    case "under_review":
+    case "submitted":
+    case "awarded":
+    case "lost":
+    case "cancelled":
+    case "attention_required":
+      return value;
+    default:
+      return "all";
+  }
+}
+
+function parseSignalFilter(value: string | null): RfqMonitorSignalFilter | null {
+  return value === "active" || value === "blocked" || value === "overdue" ? value : null;
+}
+
+function parseLeadershipFilter(value: string | null): RfqMonitorLeadershipFilter | null {
+  return value === "awaiting_response" ? value : null;
+}
+
+function buildDrilldownBadges({
+  driver,
+  leadership,
+  lossReason,
+  signal,
+  stage,
+  status,
+}: {
+  driver: string | null;
+  leadership: RfqMonitorLeadershipFilter | null;
+  lossReason: string | null;
+  signal: RfqMonitorSignalFilter | null;
+  stage: string | null;
+  status: "all" | RfqCardModel["status"];
+}) {
+  const badges: Array<{
+    label: string;
+    value: string;
+    variant: "outline" | "steel" | "gold" | "rose" | "amber";
+  }> = [];
+
+  if (signal === "active") {
+    badges.push({ label: "Signal", value: "Active RFQs", variant: "steel" });
+  } else if (signal === "blocked") {
+    badges.push({ label: "Signal", value: "Blocked RFQs", variant: "rose" });
+  } else if (signal === "overdue") {
+    badges.push({ label: "Signal", value: "Overdue RFQs", variant: "rose" });
+  }
+
+  if (stage) {
+    badges.push({ label: "Stage", value: stage, variant: "outline" });
+  }
+
+  if (driver) {
+    badges.push({ label: "Delay Driver", value: driver, variant: "gold" });
+  }
+
+  if (lossReason) {
+    badges.push({ label: "Loss Reason", value: lossReason, variant: "gold" });
+  }
+
+  if (leadership === "awaiting_response") {
+    badges.push({
+      label: "Leadership",
+      value: "Awaiting Response",
+      variant: "amber",
+    });
+  }
+
+  if (status !== "all") {
+    badges.push({
+      label: "Status",
+      value: status.replaceAll("_", " "),
+      variant: "steel",
+    });
+  }
+
+  return badges;
+}
 
 export function RFQListScreen() {
   const { role } = useRole();
+  const pathname = usePathname();
   const permissions = getPermissions(role);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const statusFromQuery = parseStatusFilter(searchParams.get("status"));
+  const signal = parseSignalFilter(searchParams.get("signal"));
+  const stage = searchParams.get("stage");
+  const driver = searchParams.get("driver");
+  const leadership = parseLeadershipFilter(searchParams.get("leadership"));
+  const lossReason = searchParams.get("loss_reason");
+  const source = searchParams.get("source");
+  const hasDashboardDrilldown =
+    source === "dashboard" ||
+    Boolean(signal || stage || driver || leadership || lossReason);
+  const drilldownBadges = buildDrilldownBadges({
+    driver,
+    leadership,
+    lossReason,
+    signal,
+    stage,
+    status: statusFromQuery,
+  });
   const {
     error,
     filteredRfqs,
@@ -27,7 +139,38 @@ export function RFQListScreen() {
     statusOptions,
     viewMode,
     setViewMode,
-  } = useRfqList();
+  } = useRfqList(role, permissions, {
+    driver,
+    initialStatusFilter: statusFromQuery,
+    leadership,
+    lossReason,
+    signal,
+    stage,
+  });
+
+  function pushQuery(nextParams: URLSearchParams) {
+    const query = nextParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function handleStatusChange(nextStatus: "all" | RfqCardModel["status"]) {
+    setStatusFilter(nextStatus);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextStatus === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", nextStatus);
+    }
+
+    pushQuery(params);
+  }
+
+  function clearDashboardDrilldown() {
+    setSearch("");
+    setStatusFilter("all");
+    router.replace(pathname);
+  }
 
   return (
     <div className="space-y-6">
@@ -36,13 +179,13 @@ export function RFQListScreen() {
           <div>
             <div className="section-kicker">
               <ListFilter className="h-3.5 w-3.5" />
-              RFQ queue shell
+              {role === "executive" ? "Strategic RFQ monitor" : "RFQ queue shell"}
             </div>
             <h1 className="mt-4 text-display text-3xl font-semibold text-foreground lg:text-4xl">
-              Operational RFQ list
+              {permissions.listTitle}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Search, scan, and open RFQs through the same boundary that will later connect to manager and intelligence services.
+              {permissions.listSubtitle}
             </p>
           </div>
           {permissions.canCreateRfq ? (
@@ -54,6 +197,38 @@ export function RFQListScreen() {
             </Button>
           ) : null}
         </div>
+
+        {hasDashboardDrilldown ? (
+          <div className="mt-6 rounded-2xl border border-border bg-muted/20 p-4 dark:bg-white/[0.02]">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="section-kicker">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Dashboard Drilldown
+                </div>
+                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                  This monitor view was opened from an executive dashboard visual. The results stay narrowed to the selected portfolio slice until you clear the drilldown.
+                </p>
+              </div>
+              <Button onClick={clearDashboardDrilldown} size="sm" variant="secondary">
+                Clear Drilldown
+              </Button>
+            </div>
+
+            {drilldownBadges.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {drilldownBadges.map((badge) => (
+                  <Badge
+                    key={`${badge.label}-${badge.value}`}
+                    variant={badge.variant}
+                  >
+                    {badge.label}: {badge.value}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-8 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="relative">
@@ -88,7 +263,7 @@ export function RFQListScreen() {
           {statusOptions.map((option) => (
             <Button
               key={option.value}
-              onClick={() => setStatusFilter(option.value)}
+              onClick={() => handleStatusChange(option.value)}
               size="sm"
               variant={statusFilter === option.value ? "outline" : "secondary"}
             >
@@ -112,12 +287,21 @@ export function RFQListScreen() {
       ) : filteredRfqs.length === 0 ? (
         <EmptyState
           actionLabel="Reset Filters"
-          description="No RFQs matched the current search and filter combination. Reset the demo controls to bring the queue back."
+          description={
+            role === "executive"
+              ? "No RFQs matched the current strategic monitor filters."
+              : "No RFQs matched the current search and filter combination. Reset the controls to bring the worklist back."
+          }
           onAction={() => {
+            if (hasDashboardDrilldown) {
+              clearDashboardDrilldown();
+              return;
+            }
+
             setSearch("");
-            setStatusFilter("all");
+            handleStatusChange("all");
           }}
-          title="No RFQs in the current view"
+          title={role === "executive" ? "No RFQs in the monitor" : "No RFQs in the current view"}
         />
       ) : viewMode === "cards" ? (
         <div className="grid gap-5 lg:grid-cols-2">

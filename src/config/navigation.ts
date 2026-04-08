@@ -32,6 +32,14 @@ export const primaryNavigation: NavigationItem[] = [
     match: "exact",
   },
   {
+    title: "RFQ Monitor",
+    href: "/rfqs",
+    description: "Strategic lifecycle monitor with read-only RFQ drill-down.",
+    icon: "files",
+    roles: ["executive"],
+    match: "prefix",
+  },
+  {
     title: "Overview",
     href: "/overview",
     description: "Portfolio health, throughput, and intelligence posture.",
@@ -63,7 +71,7 @@ export const primaryNavigation: NavigationItem[] = [
           href: "/rfqs/RFQ-2026-0142",
           description: "Fast path to the strongest complete intelligence demo state.",
           icon: "radar" as const,
-          roles: ["manager", "estimator"],
+          roles: ["executive", "manager", "estimator"],
           match: "exact" as const,
         } satisfies NavigationItem,
       ]

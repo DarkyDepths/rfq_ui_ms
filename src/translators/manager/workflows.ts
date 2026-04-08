@@ -10,18 +10,26 @@ import {
   translateManagerWorkflowStageTemplate,
   translateStageTemplate,
 } from "@/translators/manager/stages";
+import { getWorkflowPlannedDurationDays } from "@/utils/workflow-deadline";
 
 export function translateWorkflow(
   workflow: ManagerWorkflowResponse,
 ): WorkflowModel {
+  const stages = workflow.stages.map(translateStageTemplate);
+
   return {
     id: workflow.id,
     name: workflow.name,
     description: workflow.description,
     recommendedUse: workflow.recommendedUse,
-    turnaroundDays: workflow.turnaroundDays,
+    turnaroundDays:
+      getWorkflowPlannedDurationDays({
+        ...workflow,
+        stageCount: workflow.stages.length,
+        stages,
+      }) ?? workflow.turnaroundDays,
     stageCount: workflow.stages.length,
-    stages: workflow.stages.map(translateStageTemplate),
+    stages,
   };
 }
 

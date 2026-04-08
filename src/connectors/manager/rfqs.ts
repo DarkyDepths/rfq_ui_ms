@@ -1,10 +1,14 @@
 import { apiConfig } from "@/config/api";
 import { requestManagerJson } from "@/connectors/manager/base";
 import {
+  cancelDemoRfq,
+  createDemoRfq,
   managerRfqDetailResponses,
   managerRfqListResponse,
+  updateDemoRfq,
 } from "@/demo/manager/rfqs";
 import type {
+  ManagerApiCancelRfqInput,
   ManagerApiCreateRfqInput,
   ManagerApiRfqAnalytics,
   ManagerApiRfqDetail,
@@ -17,6 +21,7 @@ import type {
   ManagerApiStageListResponse,
 } from "@/models/manager/api-stage";
 import type {
+  CancelRfqInput,
   CreateRfqInput,
   DashboardMetricModel,
   ManagerRfqStatus,
@@ -37,6 +42,7 @@ import {
   translateRfqDetail,
 } from "@/translators/manager/rfqs";
 import type { ManagerDashboardAnalyticsModel } from "@/models/ui/dashboard";
+import { isActiveRfqStatus } from "@/utils/status";
 import { sleep } from "@/utils/async";
 
 export interface ListRfqsOptions {
@@ -50,6 +56,7 @@ export interface ListRfqsOptions {
 const liveStatusQueryMap: Partial<Record<ManagerRfqStatus, string>> = {
   draft: "Draft",
   in_preparation: "In preparation",
+  under_review: "Under review",
   submitted: "Submitted",
   awarded: "Awarded",
   lost: "Lost",
@@ -130,7 +137,38 @@ export async function listRfqs(
 export async function getDashboardMetrics(): Promise<DashboardMetricModel[]> {
   if (apiConfig.useMockData) {
     await sleep(apiConfig.demoLatencyMs);
-    return managerRfqListResponse.metrics.map(translateDashboardMetric);
+
+    const totalRfqs = managerRfqListResponse.items.length;
+    const openRfqs = managerRfqListResponse.items.filter((rfq) =>
+      isActiveRfqStatus(rfq.status),
+    ).length;
+    const criticalRfqs = managerRfqListResponse.items.filter(
+      (rfq) => isActiveRfqStatus(rfq.status) && rfq.priority === "critical",
+    ).length;
+    const decidedRfqs = managerRfqListResponse.items.filter(
+      (rfq) => rfq.status === "awarded" || rfq.status === "lost",
+    );
+    const avgCycleDays = decidedRfqs.length
+      ? Math.round(
+          decidedRfqs.reduce((total, rfq) => {
+            const createdAt = Date.parse(rfq.createdAt);
+            const updatedAt = Date.parse(rfq.updatedAt);
+
+            if (Number.isNaN(createdAt) || Number.isNaN(updatedAt)) {
+              return total;
+            }
+
+            return total + (updatedAt - createdAt) / (1000 * 60 * 60 * 24);
+          }, 0) / decidedRfqs.length,
+        )
+      : 0;
+
+    return translateManagerStats({
+      avg_cycle_days: avgCycleDays,
+      critical_rfqs: criticalRfqs,
+      open_rfqs: openRfqs,
+      total_rfqs_12m: totalRfqs,
+    });
   }
 
   const response = await requestManagerJson<ManagerApiRfqStats>(
@@ -250,15 +288,16 @@ export async function getRfqDetail(
   return translateManagerRfqDetail(response, stages, currentStage);
 }
 
-export async function createRfqDraft(
+export async function createRfq(
   input: CreateRfqInput,
 ): Promise<RfqMutationResult> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.75));
+    const detail = createDemoRfq(input);
     return {
-      id: `DEMO-${input.name.slice(0, 12).replace(/\s+/g, "-").toUpperCase()}`,
-      message: "Draft RFQ staged in demo mode.",
-      status: "demo_staged",
+      id: detail.id,
+      message: "RFQ created in demo mode with generated workflow stages.",
+      status: "created",
     };
   }
 
@@ -284,15 +323,18 @@ export async function createRfqDraft(
   };
 }
 
+export const createRfqDraft = createRfq;
+
 export async function updateRfqRecord(
   rfqId: string,
   input: UpdateRfqInput,
 ): Promise<RfqMutationResult> {
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.65));
+    updateDemoRfq(rfqId, input);
     return {
       id: rfqId,
-      message: "RFQ update accepted in demo mode.",
+      message: "RFQ updated in demo mode.",
       status: "updated",
     };
   }
@@ -311,20 +353,6 @@ export async function updateRfqRecord(
         outcome_reason: input.outcomeReason,
         owner: input.owner,
         priority: input.priority,
-        status:
-          input.status === "draft"
-            ? "Draft"
-            : input.status === "in_preparation"
-              ? "In preparation"
-              : input.status === "submitted"
-                ? "Submitted"
-                : input.status === "awarded"
-                  ? "Awarded"
-                  : input.status === "lost"
-                    ? "Lost"
-                    : input.status === "cancelled"
-                      ? "Cancelled"
-                      : undefined,
       } satisfies ManagerApiUpdateRfqInput),
     },
   );
@@ -332,6 +360,37 @@ export async function updateRfqRecord(
   return {
     id: response.id,
     message: "RFQ updated through the manager service.",
+    status: "updated",
+  };
+}
+
+export async function cancelRfqRecord(
+  rfqId: string,
+  input: CancelRfqInput,
+): Promise<RfqMutationResult> {
+  if (apiConfig.useMockData) {
+    await sleep(Math.round(apiConfig.demoLatencyMs * 0.65));
+    cancelDemoRfq(rfqId, input);
+    return {
+      id: rfqId,
+      message: "RFQ cancelled in demo mode.",
+      status: "updated",
+    };
+  }
+
+  const response = await requestManagerJson<ManagerApiRfqDetail>(
+    `/rfqs/${rfqId}/cancel`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        outcome_reason: input.outcomeReason,
+      } satisfies ManagerApiCancelRfqInput),
+    },
+  );
+
+  return {
+    id: response.id,
+    message: "RFQ cancelled through the manager service.",
     status: "updated",
   };
 }

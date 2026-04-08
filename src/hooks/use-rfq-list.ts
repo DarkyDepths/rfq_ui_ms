@@ -2,20 +2,51 @@
 
 import { useDeferredValue, useEffect, useState } from "react";
 
-import { listRfqs } from "@/connectors/manager/rfqs";
-import type { RfqCardModel } from "@/models/manager/rfq";
+import type { RolePermissions } from "@/config/role-permissions";
 import { apiConfig } from "@/config/api";
+import { listLeadershipNotes } from "@/connectors/manager/leadership-notes";
+import { listRfqs } from "@/connectors/manager/rfqs";
+import {
+  applyRfqMonitorDrilldown,
+  type RfqMonitorDrilldownFilters,
+} from "@/lib/executive-insights";
+import { getRoleActorProfile } from "@/lib/manager-actor";
+import { filterRfqsForRole } from "@/lib/rfq-access";
+import type { RfqCardModel } from "@/models/manager/rfq";
+import type { AppRole } from "@/models/ui/role";
 
 type ViewMode = "table" | "cards";
 
-export function useRfqList() {
+interface UseRfqListOptions extends Partial<RfqMonitorDrilldownFilters> {
+  initialStatusFilter?: "all" | RfqCardModel["status"];
+}
+
+export function useRfqList(
+  role: AppRole,
+  permissions: RolePermissions,
+  options: UseRfqListOptions = {},
+) {
+  const {
+    driver = null,
+    initialStatusFilter = "all",
+    leadership = null,
+    lossReason = null,
+    signal = null,
+    stage = null,
+  } = options;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rfqs, setRfqs] = useState<RfqCardModel[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | RfqCardModel["status"]>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<"all" | RfqCardModel["status"]>(initialStatusFilter);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const deferredSearch = useDeferredValue(search);
+  const actorName = getRoleActorProfile(role).userName;
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
 
   useEffect(() => {
     let active = true;
@@ -26,16 +57,50 @@ export function useRfqList() {
       try {
         const items = await listRfqs({
           search: deferredSearch,
-          size: 20,
+          size: 100,
           status: statusFilter,
         });
+        const scopedItems = filterRfqsForRole(role, permissions, items, actorName);
+
+        if (leadership === "awaiting_response") {
+          const leadershipThreads = await listLeadershipNotes();
+
+          if (!active) {
+            return;
+          }
+
+          setError(null);
+          setRfqs(
+            applyRfqMonitorDrilldown(
+              scopedItems,
+              {
+                driver,
+                leadership,
+                lossReason,
+                signal,
+                stage,
+              },
+              leadershipThreads,
+            ),
+          );
+          setLoading(false);
+          return;
+        }
 
         if (!active) {
           return;
         }
 
         setError(null);
-        setRfqs(items);
+        setRfqs(
+          applyRfqMonitorDrilldown(scopedItems, {
+            driver,
+            leadership,
+            lossReason,
+            signal,
+            stage,
+          }),
+        );
         setLoading(false);
       } catch (error) {
         if (!active) {
@@ -55,7 +120,18 @@ export function useRfqList() {
     return () => {
       active = false;
     };
-  }, [deferredSearch, statusFilter]);
+  }, [
+    actorName,
+    deferredSearch,
+    driver,
+    leadership,
+    lossReason,
+    permissions,
+    role,
+    signal,
+    stage,
+    statusFilter,
+  ]);
 
   const statusOptions: Array<{
     label: string;
@@ -63,16 +139,20 @@ export function useRfqList() {
   }> = apiConfig.useMockData
     ? [
         { label: "All", value: "all" },
+        { label: "Draft", value: "draft" },
         { label: "In Preparation", value: "in_preparation" },
         { label: "Under Review", value: "under_review" },
         { label: "Submitted", value: "submitted" },
         { label: "Awarded", value: "awarded" },
+        { label: "Lost", value: "lost" },
+        { label: "Cancelled", value: "cancelled" },
         { label: "Partial / Warning", value: "attention_required" },
       ]
     : [
         { label: "All", value: "all" },
         { label: "Draft", value: "draft" },
         { label: "In Preparation", value: "in_preparation" },
+        { label: "Under Review", value: "under_review" },
         { label: "Submitted", value: "submitted" },
         { label: "Awarded", value: "awarded" },
         { label: "Lost", value: "lost" },
