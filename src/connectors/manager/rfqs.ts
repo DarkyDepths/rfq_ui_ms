@@ -1,5 +1,6 @@
 import { apiConfig } from "@/config/api";
 import { requestManagerJson } from "@/connectors/manager/base";
+import { isDemoActiveRfqStatus } from "@/demo/manager/status";
 import {
   cancelDemoRfq,
   createDemoRfq,
@@ -24,6 +25,7 @@ import type {
   CancelRfqInput,
   CreateRfqInput,
   DashboardMetricModel,
+  LiveManagerRfqStatus,
   ManagerRfqStatus,
   ManagerRfqDetailResponse,
   ManagerRfqListItemResponse,
@@ -42,7 +44,6 @@ import {
   translateRfqDetail,
 } from "@/translators/manager/rfqs";
 import type { ManagerDashboardAnalyticsModel } from "@/models/ui/dashboard";
-import { isActiveRfqStatus } from "@/utils/status";
 import { sleep } from "@/utils/async";
 
 export interface ListRfqsOptions {
@@ -53,15 +54,29 @@ export interface ListRfqsOptions {
   status?: "all" | ManagerRfqStatus;
 }
 
-const liveStatusQueryMap: Partial<Record<ManagerRfqStatus, string>> = {
-  draft: "Draft",
+const liveStatusQueryMap: Record<LiveManagerRfqStatus, string> = {
   in_preparation: "In preparation",
-  under_review: "Under review",
-  submitted: "Submitted",
   awarded: "Awarded",
   lost: "Lost",
   cancelled: "Cancelled",
 };
+
+function buildUnavailableAnalyticsMetric(
+  id: string,
+  label: string,
+  helper: string,
+  tone: "steel" | "gold" | "emerald" | "amber",
+) {
+  return {
+    displayValue: "Unavailable",
+    helper,
+    id,
+    isAvailable: false,
+    label,
+    tone,
+    value: null,
+  } as const;
+}
 
 function applyDemoListFilters(
   items: ManagerRfqListItemResponse[],
@@ -109,6 +124,20 @@ export async function listRfqs(
     );
   }
 
+  const liveStatus =
+    options.status && options.status !== "all"
+      ? options.status
+      : undefined;
+
+  if (
+    liveStatus
+    && !(liveStatus in liveStatusQueryMap)
+  ) {
+    throw new Error(
+      `Unsupported live RFQ status filter '${liveStatus}'.`,
+    );
+  }
+
   const response = await requestManagerJson<ManagerApiRfqListResponse>(
     "/rfqs",
     undefined,
@@ -124,10 +153,9 @@ export async function listRfqs(
             : options.sort === "status"
               ? "status"
               : undefined,
-      status:
-        options.status && options.status !== "all"
-          ? liveStatusQueryMap[options.status]
-          : undefined,
+      status: liveStatus
+        ? liveStatusQueryMap[liveStatus as LiveManagerRfqStatus]
+        : undefined,
     },
   );
 
@@ -140,35 +168,29 @@ export async function getDashboardMetrics(): Promise<DashboardMetricModel[]> {
 
     const totalRfqs = managerRfqListResponse.items.length;
     const openRfqs = managerRfqListResponse.items.filter((rfq) =>
-      isActiveRfqStatus(rfq.status),
+      isDemoActiveRfqStatus(rfq.status),
     ).length;
     const criticalRfqs = managerRfqListResponse.items.filter(
-      (rfq) => isActiveRfqStatus(rfq.status) && rfq.priority === "critical",
+      (rfq) => isDemoActiveRfqStatus(rfq.status) && rfq.priority === "critical",
     ).length;
-    const decidedRfqs = managerRfqListResponse.items.filter(
-      (rfq) => rfq.status === "awarded" || rfq.status === "lost",
-    );
-    const avgCycleDays = decidedRfqs.length
-      ? Math.round(
-          decidedRfqs.reduce((total, rfq) => {
-            const createdAt = Date.parse(rfq.createdAt);
-            const updatedAt = Date.parse(rfq.updatedAt);
-
-            if (Number.isNaN(createdAt) || Number.isNaN(updatedAt)) {
-              return total;
-            }
-
-            return total + (updatedAt - createdAt) / (1000 * 60 * 60 * 24);
-          }, 0) / decidedRfqs.length,
-        )
-      : 0;
-
-    return translateManagerStats({
+    const avgCycleDays = 0;
+    const metrics = translateManagerStats({
       avg_cycle_days: avgCycleDays,
       critical_rfqs: criticalRfqs,
       open_rfqs: openRfqs,
       total_rfqs_12m: totalRfqs,
     });
+
+    return metrics.map((metric) =>
+      metric.id === "avg-cycle-days"
+        ? {
+            ...metric,
+            helper: "Cycle time is intentionally withheld in demo mode until a truthful source is wired.",
+            trendLabel: "Demo baseline withheld",
+            value: "Unavailable",
+          }
+        : metric,
+    );
   }
 
   const response = await requestManagerJson<ManagerApiRfqStats>(
@@ -182,61 +204,77 @@ export async function getDashboardAnalytics(): Promise<ManagerDashboardAnalytics
   if (apiConfig.useMockData) {
     await sleep(Math.round(apiConfig.demoLatencyMs * 0.8));
 
+    const awardedCount = managerRfqListResponse.items.filter(
+      (rfq) => rfq.status === "awarded",
+    ).length;
+    const lostCount = managerRfqListResponse.items.filter(
+      (rfq) => rfq.status === "lost",
+    ).length;
+    const decidedCount = awardedCount + lostCount;
+    const winRate = decidedCount
+      ? Math.round((awardedCount / decidedCount) * 1000) / 10
+      : 0;
+
+    const byClientCounts = new Map<
+      string,
+      {
+        client: string;
+        rfqCount: number;
+      }
+    >();
+    managerRfqListResponse.items.forEach((rfq) => {
+      const current = byClientCounts.get(rfq.client);
+      if (current) {
+        current.rfqCount += 1;
+        return;
+      }
+
+      byClientCounts.set(rfq.client, {
+        client: rfq.client,
+        rfqCount: 1,
+      });
+    });
+
     return {
       metrics: [
         {
           id: "win-rate",
           label: "Win Rate",
-          value: 31,
-          displayValue: "31%",
-          helper: "Demo analytics baseline for awarded pursuits.",
+          value: winRate,
+          displayValue: `${winRate}%`,
+          helper: "Computed from awarded versus lost demo RFQs.",
+          isAvailable: true,
           tone: "emerald",
         },
-        {
-          id: "estimation-accuracy",
-          label: "Estimation Accuracy",
-          value: 74,
-          displayValue: "74%",
-          helper: "Demo estimate-to-award accuracy signal.",
-          tone: "steel",
-        },
-        {
-          id: "avg-margin-submitted",
-          label: "Avg Margin Submitted",
-          value: 19,
-          displayValue: "19%",
-          helper: "Average submitted margin in demo mode.",
-          tone: "gold",
-        },
-        {
-          id: "avg-margin-awarded",
-          label: "Avg Margin Awarded",
-          value: 23,
-          displayValue: "23%",
-          helper: "Average awarded margin in demo mode.",
-          tone: "amber",
-        },
+        buildUnavailableAnalyticsMetric(
+          "estimation-accuracy",
+          "Estimation Accuracy",
+          "Not captured truthfully in demo mode yet.",
+          "steel",
+        ),
+        buildUnavailableAnalyticsMetric(
+          "avg-margin-submitted",
+          "Avg Margin Submitted",
+          "Margin analytics are intentionally withheld until a reliable source exists.",
+          "gold",
+        ),
+        buildUnavailableAnalyticsMetric(
+          "avg-margin-awarded",
+          "Avg Margin Awarded",
+          "Margin analytics are intentionally withheld until a reliable source exists.",
+          "amber",
+        ),
       ],
-      byClient: [
-        {
-          client: "Albassam Security Systems",
-          rfqCount: 12,
-          avgMarginValue: 22,
-          avgMarginLabel: "22%",
-        },
-        {
-          client: "National Grid Control",
-          rfqCount: 8,
-          avgMarginValue: 18,
-          avgMarginLabel: "18%",
-        },
-        {
-          client: "Regional Air Command",
-          rfqCount: 6,
-          avgMarginValue: 27,
-          avgMarginLabel: "27%",
-        },
-      ],
+      byClient: [...byClientCounts.values()]
+        .sort((left, right) => right.rfqCount - left.rfqCount)
+        .slice(0, 20)
+        .map((entry) => ({
+          avgMarginLabel: "Unavailable",
+          avgMarginValue: null,
+          client: entry.client,
+          isMarginAvailable: false,
+          rfqCount: entry.rfqCount,
+        })),
     };
   }
 

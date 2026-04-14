@@ -50,9 +50,9 @@ export function ConnectionIndicator({ compact = false }: { compact?: boolean }) 
             <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
               Running on mock data. Set{" "}
               <code className="font-mono text-[0.65rem] text-amber-300/80">
-                NEXT_PUBLIC_USE_MOCK_DATA=false
+                NEXT_PUBLIC_USE_MOCK_DATA=true
               </code>{" "}
-              to connect to live services.
+              to keep demo mode active.
             </p>
           </>
         )}

@@ -12,6 +12,17 @@ export interface RfqBlockedSignal {
   stageLabel?: string;
 }
 
+export function getBlockedStageHeadline(
+  rfq: Pick<RfqCardModel, "stageHistory" | "stageLabel" | "blockerStatus" | "blockerReasonCode">,
+) {
+  const blockedSignal = getRfqBlockedSignal(rfq);
+  if (!blockedSignal.isBlocked) {
+    return null;
+  }
+
+  return `Blocked in ${blockedSignal.stageLabel ?? rfq.stageLabel}`;
+}
+
 function toTitleCase(value: string) {
   return value
     .split(" ")

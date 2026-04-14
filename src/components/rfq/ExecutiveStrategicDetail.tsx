@@ -28,10 +28,15 @@ import type {
   WorkbookReviewModel,
 } from "@/models/intelligence/workbook";
 import type { RfqDetailModel } from "@/models/manager/rfq";
+import {
+  getRfqStatusLabel,
+  getTerminalRfqOutcome,
+} from "@/lib/rfq-status-display";
+import { getBlockedStageHeadline, getRfqBlockedSignal } from "@/utils/blocker-signal";
 import { intelligenceAvailabilityMeta } from "@/utils/status";
 
 function buildDeliveryRisk(rfq: RfqDetailModel) {
-  if (rfq.status === "awarded" || rfq.status === "lost" || rfq.status === "cancelled") {
+  if (getTerminalRfqOutcome(rfq.status)) {
     return {
       detail: "Terminal RFQs no longer carry an active delivery risk.",
       label: "Closed",
@@ -73,14 +78,13 @@ function buildDeliveryRisk(rfq: RfqDetailModel) {
 }
 
 function resolveBlockerSignal(rfq: RfqDetailModel) {
-  const blockedStage = rfq.stageHistory.find((stage) => stage.state === "blocked");
-
-  if (blockedStage?.blockerReasonCode) {
-    return blockedStage.blockerReasonCode.replaceAll("_", " ");
+  const blockedSignal = getRfqBlockedSignal(rfq);
+  if (blockedSignal.reasonLabel) {
+    return blockedSignal.reasonLabel;
   }
 
-  if (blockedStage) {
-    return `Blocked in ${blockedStage.label}`;
+  if (blockedSignal.isBlocked) {
+    return getBlockedStageHeadline(rfq) ?? `Blocked in ${rfq.stageLabel}`;
   }
 
   return rfq.summaryLine ?? "No blocker flagged.";
@@ -163,21 +167,24 @@ function buildDelayDiagnosis(
   rfq: RfqDetailModel,
   deliveryRisk: ReturnType<typeof buildDeliveryRisk>,
 ) {
-  const blockedStage = rfq.stageHistory.find((stage) => stage.state === "blocked");
+  const blockedSignal = getRfqBlockedSignal(rfq);
 
-  if (blockedStage?.blockerReasonCode) {
+  if (blockedSignal.reasonLabel) {
     return {
-      detail: blockedStage.blockerReasonCode.replaceAll("_", " "),
-      headline: `Blocked at ${blockedStage.label}`,
+      detail: blockedSignal.reasonLabel,
+      headline: `Blocked at ${blockedSignal.stageLabel ?? rfq.stageLabel}`,
       source: "Captured blocker reason",
       tone: "rose" as const,
     };
   }
 
-  if (blockedStage) {
+  if (blockedSignal.isBlocked) {
+    const blockedHeadline = getBlockedStageHeadline(rfq) ?? `Blocked in ${rfq.stageLabel}`;
     return {
-      detail: rfq.summaryLine ?? `The RFQ is blocked in ${blockedStage.label}.`,
-      headline: `Blocked at ${blockedStage.label}`,
+      detail:
+        rfq.summaryLine ??
+        `The RFQ is blocked in ${blockedSignal.stageLabel ?? rfq.stageLabel}.`,
+      headline: blockedHeadline.replace("Blocked in", "Blocked at"),
       source: "Lifecycle signal",
       tone: "rose" as const,
     };
@@ -201,35 +208,32 @@ function buildDelayDiagnosis(
 }
 
 function buildOutcomeState(rfq: RfqDetailModel) {
-  if (rfq.status === "lost") {
-    return {
-      detail: rfq.outcomeReason ?? rfq.summaryLine ?? "Loss rationale is not yet recorded.",
-      label: "Lost",
-      tone: "rose" as const,
-    };
+  switch (getTerminalRfqOutcome(rfq.status)) {
+    case "lost":
+      return {
+        detail: rfq.outcomeReason ?? rfq.summaryLine ?? "Loss rationale is not yet recorded.",
+        label: getRfqStatusLabel("lost"),
+        tone: "rose" as const,
+      };
+    case "awarded":
+      return {
+        detail: rfq.outcomeReason ?? rfq.summaryLine ?? "Award rationale captured in the pursuit summary.",
+        label: getRfqStatusLabel("awarded"),
+        tone: "emerald" as const,
+      };
+    case "cancelled":
+      return {
+        detail: rfq.outcomeReason ?? "Cancellation rationale is available in the RFQ summary.",
+        label: getRfqStatusLabel("cancelled"),
+        tone: "steel" as const,
+      };
+    default:
+      return {
+        detail: "Outcome is still pending while the RFQ remains active.",
+        label: "Active pursuit",
+        tone: "steel" as const,
+      };
   }
-
-  if (rfq.status === "awarded") {
-    return {
-      detail: rfq.outcomeReason ?? rfq.summaryLine ?? "Award rationale captured in the pursuit summary.",
-      label: "Awarded",
-      tone: "emerald" as const,
-    };
-  }
-
-  if (rfq.status === "cancelled") {
-    return {
-      detail: rfq.outcomeReason ?? "Cancellation rationale is available in the RFQ summary.",
-      label: "Cancelled",
-      tone: "steel" as const,
-    };
-  }
-
-  return {
-    detail: "Outcome is still pending while the RFQ remains active.",
-    label: "Active pursuit",
-    tone: "steel" as const,
-  };
 }
 
 function buildFreshnessState(
@@ -330,6 +334,7 @@ export function ExecutiveStrategicDetail({
   const liveIntelMeta = intelligenceAvailabilityMeta[
     snapshot.data?.availability ?? briefing.data?.availability ?? "not_available_yet"
   ];
+  const terminalOutcome = getTerminalRfqOutcome(rfq.status);
 
   return (
     <div className="space-y-6">
@@ -470,10 +475,7 @@ export function ExecutiveStrategicDetail({
             </p>
           </motion.section>
 
-          {(rfq.status === "lost" ||
-            rfq.status === "awarded" ||
-            rfq.status === "cancelled" ||
-            rfq.outcomeReason) ? (
+          {(terminalOutcome || rfq.outcomeReason) ? (
             <motion.section
               animate={{ opacity: 1, y: 0 }}
               className="surface-panel p-6"
@@ -510,6 +512,7 @@ export function ExecutiveStrategicDetail({
             </div>
             <IntelligencePanel
               briefing={briefing}
+              rfq={rfq}
               snapshot={snapshot}
               staleIntel={staleIntel}
               viewMode="curated"

@@ -1,7 +1,5 @@
 export type ManagerApiRfqStatus =
-  | "Draft"
   | "In preparation"
-  | "Submitted"
   | "Awarded"
   | "Lost"
   | "Cancelled";
@@ -19,7 +17,10 @@ export interface ManagerApiRfqSummary {
   status: ManagerApiRfqStatus;
   progress: number;
   deadline: string;
+  current_stage_id?: string | null;
   current_stage_name?: string | null;
+  current_stage_order?: number | null;
+  current_stage_status?: string | null;
   current_stage_blocker_status?: "Blocked" | null;
   current_stage_blocker_reason_code?: string | null;
   workflow_name?: string | null;
@@ -49,6 +50,10 @@ export interface ManagerApiRfqDetail {
   description?: string | null;
   workflow_id: string;
   current_stage_id?: string | null;
+  source_package_available: boolean;
+  source_package_updated_at?: string | null;
+  workbook_available: boolean;
+  workbook_updated_at?: string | null;
   outcome_reason?: string | null;
   created_at: string;
   updated_at: string;
@@ -64,13 +69,13 @@ export interface ManagerApiRfqStats {
 export interface ManagerApiRfqAnalyticsByClient {
   client: string;
   rfq_count: number;
-  avg_margin: number;
+  avg_margin: number | null;
 }
 
 export interface ManagerApiRfqAnalytics {
-  avg_margin_submitted: number;
-  avg_margin_awarded: number;
-  estimation_accuracy: number;
+  avg_margin_submitted: number | null;
+  avg_margin_awarded: number | null;
+  estimation_accuracy: number | null;
   win_rate: number;
   by_client: ManagerApiRfqAnalyticsByClient[];
 }

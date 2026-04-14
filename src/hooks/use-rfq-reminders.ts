@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { apiConfig } from "@/config/api";
 import { getRfqReminders } from "@/connectors/manager/reminders";
 import type { ReminderModel } from "@/models/manager/rfq";
 
@@ -21,6 +22,18 @@ export function useRfqReminders(rfqId: string) {
 
   useEffect(() => {
     let active = true;
+
+    if (apiConfig.useMockData) {
+      setState({
+        error:
+          "Reminder service stays live-only in this phase. Switch to live mode for RFQ reminder truth.",
+        loading: false,
+        reminders: [],
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     setState((current) => ({
       ...current,

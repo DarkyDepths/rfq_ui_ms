@@ -21,10 +21,12 @@ import {
   buildLossReasonDistribution,
   getAwaitingLeadershipThreads,
   getCurrentLeadershipThread,
+  getLossReasonLabel,
   isOverdueRfq,
   isTerminalRfq,
   type ExecutiveAggregateEntry,
 } from "@/lib/executive-insights";
+import { getBlockedStageHeadline, getRfqBlockedSignal } from "@/utils/blocker-signal";
 
 export interface ExecutiveAttentionItem {
   leadershipThreadStateLabel?: LeadershipNoteThreadModel["stateLabel"];
@@ -54,11 +56,9 @@ function buildExecutiveMetrics(
   leadershipNotesError: string | null,
 ): KPIMetricModel[] {
   const activeCount = rfqs.filter((rfq) => !isTerminalRfq(rfq)).length;
-  const blockedCount = rfqs.filter((rfq) =>
-    rfq.stageHistory.some((stage) => stage.state === "blocked"),
-  ).length;
+  const blockedCount = rfqs.filter((rfq) => getRfqBlockedSignal(rfq).isBlocked).length;
   const overdueCount = rfqs.filter(isOverdueRfq).length;
-  const lossesCount = rfqs.filter((rfq) => rfq.status === "lost").length;
+  const lossesCount = rfqs.filter((rfq) => getLossReasonLabel(rfq) !== null).length;
   const awaitingManagerCount = getAwaitingLeadershipThreads(leadershipNotes).length;
 
   return [
@@ -118,7 +118,7 @@ function buildExecutiveAttentionItems(
 ): ExecutiveAttentionItem[] {
   return rfqs
     .map((rfq) => {
-      const blockedStage = rfq.stageHistory.find((stage) => stage.state === "blocked");
+      const blockedSignal = getRfqBlockedSignal(rfq);
       const overdue = isOverdueRfq(rfq);
       const currentThread = getCurrentLeadershipThread(rfq.id, leadershipNotes);
       const waitingOnManager = Boolean(currentThread?.waitingOnManager);
@@ -129,15 +129,16 @@ function buildExecutiveAttentionItems(
           }
         : {};
 
-      if (blockedStage) {
+      if (blockedSignal.isBlocked) {
+        const blockedHeadline = getBlockedStageHeadline(rfq) ?? rfq.stageLabel;
         return {
           ...leadershipMeta,
           reason:
             rfq.summaryLine ??
-            `Blocked in ${blockedStage.label}. Review the RFQ detail for blocker diagnosis and escalation context.`,
+            `${blockedHeadline}. Review the RFQ detail for blocker diagnosis and escalation context.`,
           rfq,
           score: 420 + rfq.rfqProgress + (waitingOnManager ? 60 : 0),
-          signalLabel: `Blocked in ${blockedStage.label}`,
+          signalLabel: blockedHeadline,
           tone: "rose" as const,
         };
       }
@@ -167,7 +168,7 @@ function buildExecutiveAttentionItems(
         };
       }
 
-      if (rfq.status === "attention_required" || rfq.intelligenceState === "failed") {
+      if (rfq.intelligenceState === "failed") {
         return {
           ...leadershipMeta,
           reason:

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { apiConfig } from "@/config/api";
 import {
   getReminderRules,
   getReminderStats,
@@ -33,6 +34,20 @@ export function useReminderCenter() {
 
   useEffect(() => {
     let active = true;
+
+    if (apiConfig.useMockData) {
+      setState({
+        error:
+          "Reminder service stays live-only in this phase. Switch to live mode for Reminder Center operations.",
+        loading: false,
+        reminders: [],
+        rules: [],
+        stats: null,
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     setState((current) => ({
       ...current,

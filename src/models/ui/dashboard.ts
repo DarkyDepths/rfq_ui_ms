@@ -17,17 +17,19 @@ export interface KPIMetricModel {
 export interface DashboardAnalyticsMetricModel {
   id: string;
   label: string;
-  value: number;
+  value: number | null;
   displayValue: string;
   helper: string;
   tone: "steel" | "gold" | "emerald" | "amber";
+  isAvailable: boolean;
 }
 
 export interface DashboardClientAnalyticsModel {
   client: string;
   rfqCount: number;
-  avgMarginValue: number;
+  avgMarginValue: number | null;
   avgMarginLabel: string;
+  isMarginAvailable: boolean;
 }
 
 export interface ManagerDashboardAnalyticsModel {

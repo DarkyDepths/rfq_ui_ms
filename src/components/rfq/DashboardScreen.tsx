@@ -285,19 +285,27 @@ export function DashboardScreen() {
                       <div className="text-sm font-semibold text-foreground">
                         {metric.label}
                       </div>
-                      <Badge variant={metric.tone}>{metric.displayValue}</Badge>
+                      <Badge variant={metric.isAvailable ? metric.tone : "pending"}>
+                        {metric.displayValue}
+                      </Badge>
                     </div>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {metric.helper}
                     </p>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/50">
-                      <motion.div
-                        animate={{ width: `${Math.max(6, Math.min(metric.value, 100))}%` }}
-                        className="h-full rounded-full bg-primary"
-                        initial={{ width: 0 }}
-                        transition={{ delay: index * 0.08, duration: 0.5 }}
-                      />
-                    </div>
+                    {metric.isAvailable && metric.value !== null ? (
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted/50">
+                        <motion.div
+                          animate={{ width: `${Math.max(6, Math.min(metric.value, 100))}%` }}
+                          className="h-full rounded-full bg-primary"
+                          initial={{ width: 0 }}
+                          transition={{ delay: index * 0.08, duration: 0.5 }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                        Awaiting truthful source data.
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -339,16 +347,21 @@ export function DashboardScreen() {
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted/40">
-                        <motion.div
-                          animate={{
-                            width: `${Math.max(8, Math.min(entry.avgMarginValue, 100))}%`,
-                          }}
-                          className="h-full rounded-full bg-amber-500"
-                          initial={{ width: 0 }}
-                          transition={{ delay: index * 0.08, duration: 0.45 }}
-                        />
+                        {entry.isMarginAvailable && entry.avgMarginValue !== null ? (
+                          <motion.div
+                            animate={{
+                              width: `${Math.max(8, Math.min(entry.avgMarginValue, 100))}%`,
+                            }}
+                            className="h-full rounded-full bg-amber-500"
+                            initial={{ width: 0 }}
+                            transition={{ delay: index * 0.08, duration: 0.45 }}
+                          />
+                        ) : null}
                       </div>
-                      <Badge variant="gold">{entry.avgMarginLabel} margin</Badge>
+                      <Badge variant={entry.isMarginAvailable ? "gold" : "pending"}>
+                        {entry.avgMarginLabel}
+                        {entry.isMarginAvailable ? " margin" : ""}
+                      </Badge>
                     </div>
                   </div>
                 ))}

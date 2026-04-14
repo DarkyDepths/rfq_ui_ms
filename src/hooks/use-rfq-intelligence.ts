@@ -108,7 +108,7 @@ function deriveStaleNotice(
     managerUpdatedAtValue: managerUpdatedAt,
     managerUpdatedLabel: formatDate(managerUpdatedAt),
     message:
-      "Operational data changed after the latest intelligence artifact update. Intelligence may not reflect the newest stage, files, or notes yet.",
+      "This RFQ changed after the last intelligence refresh. Review the current intelligence carefully and refresh it if you need the latest package, workbook, or stage context.",
   };
 }
 

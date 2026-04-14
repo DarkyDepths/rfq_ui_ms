@@ -1,3 +1,4 @@
+import { apiConfig } from "@/config/api";
 import { requestManagerJson } from "@/connectors/manager/base";
 import type {
   ManagerApiReminderCreateInput,
@@ -24,9 +25,16 @@ interface ReminderListFilters {
   user?: string;
 }
 
+const DEMO_REMINDER_UNAVAILABLE_MESSAGE =
+  "Reminder service stays live-only in this phase. Switch to live mode for reminder operations.";
+
 export async function listReminders(
   filters: ReminderListFilters = {},
 ): Promise<ReminderModel[]> {
+  if (apiConfig.useMockData) {
+    return [];
+  }
+
   const response = await requestManagerJson<ManagerApiReminderListResponse>(
     "/reminders",
     undefined,
@@ -47,6 +55,15 @@ export async function getRfqReminders(
 }
 
 export async function getReminderStats(): Promise<ReminderStatsModel> {
+  if (apiConfig.useMockData) {
+    return {
+      dueThisWeek: 0,
+      openTasks: 0,
+      overdueTasks: 0,
+      withActiveReminders: 0,
+    };
+  }
+
   const response = await requestManagerJson<ManagerApiReminderStats>(
     "/reminders/stats",
   );
@@ -55,6 +72,10 @@ export async function getReminderStats(): Promise<ReminderStatsModel> {
 }
 
 export async function getReminderRules(): Promise<ReminderRuleModel[]> {
+  if (apiConfig.useMockData) {
+    return [];
+  }
+
   const response = await requestManagerJson<ManagerApiReminderRuleListResponse>(
     "/reminders/rules",
   );
@@ -65,6 +86,10 @@ export async function getReminderRules(): Promise<ReminderRuleModel[]> {
 export async function createReminder(
   input: ReminderCreateInput,
 ): Promise<void> {
+  if (apiConfig.useMockData) {
+    throw new Error(DEMO_REMINDER_UNAVAILABLE_MESSAGE);
+  }
+
   await requestManagerJson(
     "/reminders",
     {
@@ -84,6 +109,10 @@ export async function createReminder(
 export async function resolveReminder(
   reminderId: string,
 ): Promise<void> {
+  if (apiConfig.useMockData) {
+    throw new Error(DEMO_REMINDER_UNAVAILABLE_MESSAGE);
+  }
+
   await requestManagerJson(
     `/reminders/${reminderId}/resolve`,
     {
@@ -93,6 +122,10 @@ export async function resolveReminder(
 }
 
 export async function processReminders(): Promise<string> {
+  if (apiConfig.useMockData) {
+    throw new Error(DEMO_REMINDER_UNAVAILABLE_MESSAGE);
+  }
+
   const response = await requestManagerJson<{ message: string }>(
     "/reminders/process",
     {
@@ -104,6 +137,10 @@ export async function processReminders(): Promise<string> {
 }
 
 export async function sendReminderTestEmail(): Promise<string> {
+  if (apiConfig.useMockData) {
+    throw new Error(DEMO_REMINDER_UNAVAILABLE_MESSAGE);
+  }
+
   const response = await requestManagerJson<{ message: string }>(
     "/reminders/test",
     {
@@ -118,6 +155,10 @@ export async function updateReminderRule(
   ruleId: string,
   isActive: boolean,
 ): Promise<void> {
+  if (apiConfig.useMockData) {
+    throw new Error(DEMO_REMINDER_UNAVAILABLE_MESSAGE);
+  }
+
   await requestManagerJson(
     `/reminders/rules/${ruleId}`,
     {

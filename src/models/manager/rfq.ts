@@ -3,15 +3,21 @@ import type {
   StageProgressModel,
 } from "@/models/manager/stage";
 
-export type ManagerRfqStatus =
-  | "draft"
+export type LiveManagerRfqStatus =
   | "in_preparation"
-  | "under_review"
-  | "submitted"
   | "awarded"
   | "lost"
-  | "cancelled"
+  | "cancelled";
+
+export type DemoOnlyManagerRfqStatus =
+  | "draft"
+  | "under_review"
+  | "submitted"
   | "attention_required";
+
+export type ManagerRfqStatus =
+  | LiveManagerRfqStatus
+  | DemoOnlyManagerRfqStatus;
 
 export type IntelligenceState = "pending" | "partial" | "complete" | "failed";
 export type PriorityLevel = "critical" | "high" | "normal";
@@ -94,6 +100,10 @@ export interface ManagerRfqDetailResponse extends ManagerRfqListItemResponse {
   industry?: string;
   country?: string;
   outcomeReason?: string;
+  sourcePackageAvailable?: boolean;
+  sourcePackageUpdatedAt?: string;
+  workbookAvailable?: boolean;
+  workbookUpdatedAt?: string;
   procurementLead: string;
   estimatedSubmissionDate: string;
   stageNotes: ManagerStageNoteResponse[];
@@ -229,6 +239,12 @@ export interface RfqDetailModel extends RfqCardModel {
   procurementLead?: string;
   estimatedSubmissionLabel?: string;
   currentStageId?: string | null;
+  sourcePackageAvailable: boolean;
+  sourcePackageUpdatedAtValue?: string;
+  sourcePackageUpdatedLabel?: string;
+  workbookAvailable: boolean;
+  workbookUpdatedAtValue?: string;
+  workbookUpdatedLabel?: string;
   outcomeReason?: string;
   stageNotes: StageNoteModel[];
   recentFiles: RfqFileModel[];

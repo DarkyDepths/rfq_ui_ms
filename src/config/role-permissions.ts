@@ -15,7 +15,6 @@ export interface RolePermissions {
   canDeleteFiles: boolean;
   canReadRfqLifecycle: boolean;
   canEditCoreRfq: boolean;
-  canEditDraftRfq: boolean;
   canManageReminders: boolean;
   canManageStageNotes: boolean;
   canManageStageWorkspace: boolean;
@@ -65,7 +64,6 @@ function createPermissions(role: AppRole): RolePermissions {
       getCapabilityGrant(role, "rfq.lifecycle.read"),
     ),
     canEditCoreRfq: isCapabilityAllowed(getCapabilityGrant(role, "rfq.core.update")),
-    canEditDraftRfq: isCapabilityAllowed(getCapabilityGrant(role, "rfq.draft.update")),
     canManageReminders: isCapabilityAllowed(getCapabilityGrant(role, "reminder.manage")),
     canManageStageNotes: isCapabilityAllowed(
       getCapabilityGrant(role, "rfq.stage.note.write"),

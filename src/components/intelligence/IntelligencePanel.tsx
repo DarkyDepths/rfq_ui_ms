@@ -1,11 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
-  CheckCheck,
+  BarChart3,
   ClipboardCheck,
   FileText,
-  Flag,
   Sparkles,
 } from "lucide-react";
 
@@ -22,16 +22,198 @@ import type {
   WorkbookProfileModel,
   WorkbookReviewModel,
 } from "@/models/intelligence/workbook";
+import type { RfqDetailModel } from "@/models/manager/rfq";
 import { intelligenceAvailabilityMeta } from "@/utils/status";
 
-function PanelCard({
+function sanitizePackageSignal(item: string) {
+  if (item.startsWith("Project: ")) {
+    return item;
+  }
+
+  if (item.startsWith("Client: ")) {
+    return item;
+  }
+
+  if (item.startsWith("Source package:")) {
+    return "Client RFQ package is linked and available for review.";
+  }
+
+  const mrMatch = item.match(/^MR\s+(.+)$/i);
+  if (mrMatch) {
+    return `Inquiry reference: ${mrMatch[1]}`;
+  }
+
+  const bomMatch = item.match(/^(\d+)\s+BOM tag\(s\)$/i);
+  if (bomMatch) {
+    return `${bomMatch[1]} BOM tag(s) detected in the package.`;
+  }
+
+  const rvlMatch = item.match(/^(\d+)\s+RVL vendor\(s\)$/i);
+  if (rvlMatch) {
+    return `${rvlMatch[1]} vendor reference(s) detected in the package.`;
+  }
+
+  if (item.startsWith("Standards families:")) {
+    return item.replace("Standards families:", "Standards detected:");
+  }
+
+  return item;
+}
+
+function sanitizePackageGap(item: string) {
+  switch (item.toLowerCase()) {
+    case "semantic pdf understanding":
+      return "Detailed document reading is still limited.";
+    case "deep qaqc extraction":
+      return "Detailed QA/QC extraction is still limited.";
+    case "structured compliance extraction":
+      return "Structured compliance extraction still needs deeper parsing.";
+    case "deep file inventory":
+      return "Detailed package inventory still needs review.";
+    case "document extraction":
+      return "Detailed document extraction is still limited.";
+    case "workbook comparison":
+      return "Workbook comparison is not ready until the estimator workbook is reviewed.";
+    default:
+      return item;
+  }
+}
+
+function sanitizePackageAction(item: string) {
+  const normalized = item.toLowerCase();
+
+  if (normalized.includes("workbook_profile") || normalized.includes("review_report")) {
+    return "Upload the estimator workbook to unlock workbook comparison.";
+  }
+
+  if (normalized.includes("deterministic package findings")) {
+    return "Review the package findings and warnings before using them in decisions.";
+  }
+
+  if (normalized.includes("human review")) {
+    return "Treat this as early guidance and confirm the important points with human review.";
+  }
+
+  if (normalized.includes("upload the incoming rfq package")) {
+    return "Upload the incoming client RFQ package to start package intelligence.";
+  }
+
+  if (normalized.includes("run package intelligence")) {
+    return "Generate the first package summary for this RFQ.";
+  }
+
+  return item;
+}
+
+function sanitizePackageSummary(item: string) {
+  const normalized = item.toLowerCase();
+
+  if (normalized.includes("deterministic-enriched v1 briefing")) {
+    return "An initial package summary is available from the client RFQ package. It helps early review, but it still needs human confirmation.";
+  }
+
+  if (normalized.includes("manager-provided context only")) {
+    return "An initial package summary is available from the current RFQ package and manager context. Use it as early guidance, not final decision support.";
+  }
+
+  if (normalized.includes("semantic pdf understanding remains deferred")) {
+    return "An initial package summary is available, but deeper document understanding is still limited.";
+  }
+
+  return item;
+}
+
+function sanitizeWorkbookCoverage(item: string) {
+  if (item.includes("tracked sheet(s)")) {
+    return item.replace("tracked sheet(s)", "workbook sheet(s) recognized");
+  }
+
+  if (item.startsWith("Template: ")) {
+    return item.replace("Template: ", "Workbook template: ");
+  }
+
+  if (item.startsWith("Template match: ")) {
+    return item.replace("Template match: ", "Template recognition: ");
+  }
+
+  return item;
+}
+
+function sanitizeWorkbookFinding(item: string) {
+  if (item.includes("Workbook template recognition indicates missing expected sheets.")) {
+    return "Some expected workbook sheets are missing, so the comparison needs human review.";
+  }
+
+  if (item.includes("Workbook fixture processed as standalone input")) {
+    return "The workbook was reviewed separately, so its comparison against the RFQ package still needs confirmation.";
+  }
+
+  if (item.includes("Insufficient historical base for benchmark analysis")) {
+    return "Benchmark comparison is not available yet because the historical base is still too small.";
+  }
+
+  if (item.includes("Upload the late-lifecycle estimator workbook")) {
+    return "Upload the estimator workbook to unlock workbook comparison.";
+  }
+
+  return item;
+}
+
+function sanitizeWorkbookSummary(item: string) {
+  const normalized = item.toLowerCase();
+
+  if (normalized.includes("review posture:")) {
+    return "Workbook comparison is available, but it still needs human review before it is used in decisions.";
+  }
+
+  if (normalized.includes("workbook review report")) {
+    return "Workbook comparison results are available for review.";
+  }
+
+  return item;
+}
+
+function sanitizeHistoricalSignal(item: string) {
+  if (item.startsWith("Similarity:")) {
+    return "Similarity benchmark: historical base is still too small.";
+  }
+
+  if (item.startsWith("Benchmarking:")) {
+    return "Benchmark comparison: historical base is still too small.";
+  }
+
+  if (item.includes("cold-start maturity mode")) {
+    return "The historical learning base is still in its early stage.";
+  }
+
+  return item;
+}
+
+function getUserFacingAvailability(
+  availability: keyof typeof intelligenceAvailabilityMeta,
+) {
+  switch (availability) {
+    case "partial":
+      return "Needs Review";
+    case "preliminary":
+      return "Initial Review";
+    case "available":
+      return "Ready";
+    case "failed":
+      return "Needs Attention";
+    default:
+      return intelligenceAvailabilityMeta[availability].label;
+  }
+}
+
+function PhaseCard({
   title,
   icon: Icon,
   children,
 }: {
   title: string;
-  icon: typeof FileText;
-  children: React.ReactNode;
+  icon: typeof Sparkles;
+  children: ReactNode;
 }) {
   return (
     <div className="surface-panel p-5">
@@ -75,65 +257,208 @@ function ListSection({
   );
 }
 
-function ResourceShell<T>({
-  emptyTitle,
-  emptyDescription,
-  render,
-  resource,
-}: {
-  emptyTitle: string;
-  emptyDescription: string;
-  render: (data: T) => React.ReactNode;
-  resource: IntelligenceResourceState<T | null>;
-}) {
-  if (resource.loading) {
-    return <SkeletonCard lines={5} />;
-  }
-
-  if (resource.error) {
-    return (
-      <div className="rounded-xl border border-rose-500/20 bg-rose-500/8 p-4 text-sm text-rose-700 dark:text-rose-300">
-        {resource.error}
-      </div>
-    );
-  }
-
-  if (!resource.data) {
-    return (
-      <div className="rounded-xl border border-border bg-muted/20 p-4 dark:bg-white/[0.02]">
-        <div className="text-sm font-medium text-foreground">{emptyTitle}</div>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {emptyDescription}
-        </p>
-      </div>
-    );
-  }
-
-  return <>{render(resource.data)}</>;
-}
-
 function MetaRow({
   availability,
   updatedLabel,
   version,
 }: {
   availability: keyof typeof intelligenceAvailabilityMeta;
-  updatedLabel: string;
+  updatedLabel?: string;
   version?: string;
 }) {
   const meta = intelligenceAvailabilityMeta[availability];
+  const label = getUserFacingAvailability(availability);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Badge variant={meta.tone}>{meta.label}</Badge>
+      <Badge variant={meta.tone}>{label}</Badge>
       {version ? <Badge variant="default">{version}</Badge> : null}
-      <span className="text-xs text-muted-foreground">Updated {updatedLabel}</span>
+      {updatedLabel ? (
+        <span className="text-xs text-muted-foreground">Updated {updatedLabel}</span>
+      ) : null}
     </div>
   );
 }
 
+function buildPackagePhase(
+  rfq: RfqDetailModel,
+  snapshot: IntelligenceResourceState<IntelligenceSnapshotModel | null>,
+  briefing: IntelligenceResourceState<BriefingArtifactModel | null>,
+) {
+  if (!rfq.sourcePackageAvailable) {
+    return {
+      actions: ["Upload the incoming RFQ package to start package intelligence."],
+      availability: "not_available_yet" as const,
+      description:
+        "Waiting for RFQ package upload. Package intelligence starts as soon as the client package is available in the RFQ.",
+      details: [],
+      summary: "No client RFQ package is currently available for package intelligence.",
+      title: "Waiting for RFQ Package",
+      updatedLabel: undefined,
+      version: undefined,
+    };
+  }
+
+  if (snapshot.loading || briefing.loading) {
+    return {
+      actions: [],
+      availability: "pending" as const,
+      description:
+        "Package intelligence is being refreshed from the latest client RFQ package.",
+      details: [],
+      summary: "Package intelligence is loading for this RFQ.",
+      title: "Package Intelligence In Progress",
+      updatedLabel: undefined,
+      version: undefined,
+    };
+  }
+
+  if (snapshot.data || briefing.data) {
+    const data = snapshot.data;
+    return {
+      actions: briefing.data?.recommendedActions ?? [],
+      availability:
+        snapshot.data?.availability
+        ?? briefing.data?.availability
+        ?? "available",
+      description:
+        "A first package summary is available from the client RFQ package and can support early pursuit understanding.",
+      details: [
+        ...(briefing.data?.keySignals.map(sanitizePackageSignal) ?? []),
+        ...(snapshot.data?.reviewFlags.map((flag) => sanitizePackageGap(flag.detail)) ?? []),
+      ],
+      summary:
+        sanitizePackageSummary(
+          briefing.data?.summary
+          ?? data?.summary
+          ?? "Initial package intelligence is available.",
+        ),
+      title: "Initial Package Intelligence Ready",
+      updatedLabel: briefing.data?.updatedLabel ?? data?.updatedLabel,
+      version: briefing.data?.version ?? data?.version,
+    };
+  }
+
+  return {
+    actions: ["Generate the first package summary for this RFQ."],
+    availability: "not_available_yet" as const,
+    description:
+      "RFQ package is available, but package intelligence has not been generated yet.",
+    details: [],
+    summary: "Package intelligence is ready to be generated from the uploaded client RFQ package.",
+    title: "Package Ready To Process",
+    updatedLabel: rfq.sourcePackageUpdatedLabel,
+    version: undefined,
+  };
+}
+
+function buildWorkbookPhase(
+  rfq: RfqDetailModel,
+  workbookProfile: IntelligenceResourceState<WorkbookProfileModel | null>,
+  workbookReview: IntelligenceResourceState<WorkbookReviewModel | null>,
+) {
+  if (!rfq.workbookAvailable) {
+    return {
+      actions: ["Upload the late-lifecycle estimator workbook to unlock workbook enrichment."],
+      availability: "not_available_yet" as const,
+      description:
+        "Workbook enrichment starts only after the estimator workbook exists.",
+      details: [],
+      summary:
+        "Workbook enrichment is waiting for workbook upload and should not be treated as an early RFQ step.",
+      title: "Waiting for Workbook Upload",
+      updatedLabel: undefined,
+      version: undefined,
+    };
+  }
+
+  if (workbookProfile.loading || workbookReview.loading) {
+    return {
+      actions: [],
+      availability: "pending" as const,
+      description:
+        "Workbook enrichment is being refreshed from the latest estimator workbook.",
+      details: [],
+      summary: "Workbook enrichment is loading for this RFQ.",
+      title: "Workbook Enrichment In Progress",
+      updatedLabel: undefined,
+      version: undefined,
+    };
+  }
+
+  if (workbookProfile.data || workbookReview.data) {
+    return {
+      actions: workbookReview.data?.findings.map((finding) => finding.title) ?? [],
+      availability:
+        workbookReview.data?.availability
+        ?? workbookProfile.data?.availability
+        ?? "available",
+      description:
+        "Workbook enrichment compares the estimator workbook against the original RFQ package.",
+      details: [
+        ...(workbookProfile.data?.sheetStats.map(sanitizeWorkbookCoverage) ?? []),
+        ...(workbookProfile.data?.missingSections ?? []),
+        ...(workbookReview.data?.findings.map((finding) => sanitizeWorkbookFinding(`${finding.title}: ${finding.detail}`)) ?? []),
+      ],
+      summary:
+        sanitizeWorkbookSummary(
+          workbookReview.data?.summary
+          ?? workbookProfile.data?.summary
+          ?? "Workbook enrichment is available.",
+        ),
+      title: "Workbook Comparison Ready",
+      updatedLabel:
+        workbookReview.data?.updatedLabel ?? workbookProfile.data?.updatedLabel,
+      version: workbookReview.data?.version ?? workbookProfile.data?.version,
+    };
+  }
+
+  return {
+    actions: ["Run workbook enrichment to compare the workbook against the RFQ package."],
+    availability: "not_available_yet" as const,
+    description:
+      "Workbook is available, but workbook enrichment has not been generated yet.",
+    details: [],
+    summary: "Workbook enrichment is ready to be generated from the uploaded workbook.",
+    title: "Workbook Ready To Process",
+    updatedLabel: rfq.workbookUpdatedLabel,
+    version: undefined,
+  };
+}
+
+function buildHistoricalPhase(
+  rfq: RfqDetailModel,
+  snapshot: IntelligenceResourceState<IntelligenceSnapshotModel | null>,
+) {
+  const availabilityEntries = snapshot.data?.availabilityMatrix ?? [];
+  const historicalSignals = availabilityEntries.filter((entry) =>
+    ["Benchmarking", "Similarity"].includes(entry.label),
+  );
+
+  return {
+    actions: [
+      rfq.status === "awarded" || rfq.status === "lost" || rfq.status === "cancelled"
+        ? "This RFQ can contribute to the historical base after closeout and workbook retention."
+        : "Historical insights unlock after enough completed RFQs and retained workbooks exist.",
+    ],
+    availability: "not_available_yet" as const,
+    description:
+      "Historical insights are portfolio-powered and remain intentionally maturity-gated in this phase.",
+    details:
+      historicalSignals.length > 0
+        ? historicalSignals.map((entry) => sanitizeHistoricalSignal(`${entry.label}: ${entry.value}`))
+        : ["Benchmarking and similarity are still building from a small historical base."],
+    summary:
+      "Historical insights become useful after enough completed RFQs and retained workbooks are available. The current portfolio is not mature enough yet.",
+    title: "Historical Maturity Not Reached Yet",
+    updatedLabel: undefined,
+    version: undefined,
+  };
+}
+
 export function IntelligencePanel({
   briefing,
+  rfq,
   snapshot,
   staleIntel,
   viewMode = "working",
@@ -141,44 +466,38 @@ export function IntelligencePanel({
   workbookReview,
 }: {
   briefing: IntelligenceResourceState<BriefingArtifactModel | null>;
+  rfq: RfqDetailModel;
   snapshot: IntelligenceResourceState<IntelligenceSnapshotModel | null>;
   staleIntel: IntelligenceStaleNotice | null;
   viewMode?: "curated" | "working";
   workbookProfile: IntelligenceResourceState<WorkbookProfileModel | null>;
   workbookReview: IntelligenceResourceState<WorkbookReviewModel | null>;
 }) {
+  const packagePhase = buildPackagePhase(rfq, snapshot, briefing);
+  const workbookPhase = buildWorkbookPhase(rfq, workbookProfile, workbookReview);
+  const historicalPhase = buildHistoricalPhase(rfq, snapshot);
+
   const heroState =
-    snapshot.data?.availability ??
-    briefing.data?.availability ??
-    workbookProfile.data?.availability ??
-    workbookReview.data?.availability ??
-    (snapshot.loading ||
-    briefing.loading ||
-    workbookProfile.loading ||
-    workbookReview.loading
-      ? "pending"
-      : "not_available_yet");
+    packagePhase.availability === "available" || packagePhase.availability === "preliminary"
+      ? workbookPhase.availability === "available" || workbookPhase.availability === "partial"
+        ? "available"
+        : "partial"
+      : packagePhase.availability;
 
   const heroSummary =
-    snapshot.data?.summary ??
-    briefing.data?.summary ??
-    workbookProfile.data?.summary ??
-    workbookReview.data?.summary ??
-    "No intelligence artifacts are available yet for this RFQ.";
-
-  const heroActions =
-    snapshot.data?.reviewFlags.map((flag) => `${flag.label}: ${flag.detail}`) ??
-    briefing.data?.openQuestions ??
-    workbookReview.data?.findings.map((finding) => `${finding.title}: ${finding.detail}`) ??
-    [];
+    packagePhase.availability === "not_available_yet"
+      ? "The intelligence assistant is waiting for the first client RFQ package."
+      : workbookPhase.availability === "not_available_yet"
+        ? "An initial package summary is available, while workbook enrichment remains a later lifecycle step."
+        : "Package intelligence and workbook enrichment are both available for this RFQ, but they still need human review.";
 
   return (
     <div className="space-y-6">
       {staleIntel ? (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/8 p-4 text-sm text-amber-700 dark:text-amber-300">
-          <div className="font-medium text-foreground">Intelligence may be stale</div>
+          <div className="font-medium text-foreground">Intelligence needs refresh review</div>
           <p className="mt-1.5 leading-relaxed">
-            {staleIntel.message} Manager updated {staleIntel.managerUpdatedLabel}; latest intelligence update {staleIntel.intelligenceUpdatedLabel}.
+            {staleIntel.message} RFQ updated {staleIntel.managerUpdatedLabel}; latest intelligence refresh {staleIntel.intelligenceUpdatedLabel}.
           </p>
         </div>
       ) : null}
@@ -191,11 +510,15 @@ export function IntelligencePanel({
       >
         <div className="section-kicker">
           <Sparkles className="h-3.5 w-3.5" />
-          Intelligence Status
+          Intelligence Overview
         </div>
         <div className="mt-4">
           <PartialIntelligenceState
-            actions={heroActions.slice(0, 4)}
+            actions={[
+              packagePhase.title,
+              workbookPhase.title,
+              "Historical insights remain maturity-gated in this phase.",
+            ]}
             state={heroState}
             summary={heroSummary}
           />
@@ -203,202 +526,91 @@ export function IntelligencePanel({
       </motion.div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <PanelCard icon={ClipboardCheck} title="Snapshot">
-          <ResourceShell
-            emptyDescription="The snapshot artifact is not available yet for this RFQ."
-            emptyTitle="Snapshot unavailable"
-            render={(data) => (
-              <div className="space-y-4">
-                <MetaRow
-                  availability={data.availability}
-                  updatedLabel={data.updatedLabel}
-                  version={data.version}
-                />
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {data.summary}
-                </p>
-                <ListSection
-                  emptyLabel="No snapshot review flags are currently recorded."
-                  items={data.reviewFlags.map((flag) => `${flag.label}: ${flag.detail}`)}
-                  title="Snapshot Flags"
-                />
-                <ListSection
-                  emptyLabel="No recommended tabs are currently suggested."
-                  items={data.recommendedTabs}
-                  title="Recommended Tabs"
-                />
-                {data.availabilityMatrix.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      Availability Matrix
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {data.availabilityMatrix.map((entry) => (
-                        <div key={`${entry.label}-${entry.value}`} className="stat-cell">
-                          <div className="text-sm font-medium text-foreground">
-                            {entry.label}
-                          </div>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            {entry.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-            resource={snapshot}
-          />
-        </PanelCard>
+        <PhaseCard icon={ClipboardCheck} title="Package Intelligence">
+          {briefing.loading || snapshot.loading ? (
+            <SkeletonCard lines={5} />
+          ) : (
+            <div className="space-y-4">
+              <MetaRow
+                availability={packagePhase.availability}
+                updatedLabel={packagePhase.updatedLabel}
+                version={packagePhase.version}
+              />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {packagePhase.summary}
+              </p>
+              <ListSection
+                emptyLabel="No package signals are listed yet."
+                items={briefing.data?.keySignals.map(sanitizePackageSignal) ?? []}
+                title="Known From Package"
+              />
+              <ListSection
+                emptyLabel="No package review gaps are listed yet."
+                items={(briefing.data?.openQuestions ?? packagePhase.actions).map(sanitizePackageGap)}
+                title="Needs Human Review"
+              />
+              <ListSection
+                emptyLabel="No next step is currently listed."
+                items={(briefing.data?.recommendedActions ?? []).map(sanitizePackageAction)}
+                title="Recommended Next Step"
+              />
+            </div>
+          )}
+        </PhaseCard>
 
-        <PanelCard icon={FileText} title="Briefing">
-          <ResourceShell
-            emptyDescription="The briefing artifact is not available yet for this RFQ."
-            emptyTitle="Briefing unavailable"
-            render={(data) => (
-              <div className="space-y-4">
-                <MetaRow
-                  availability={data.availability}
-                  updatedLabel={data.updatedLabel}
-                  version={data.version}
-                />
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {data.summary}
-                </p>
-                <ListSection
-                  emptyLabel="No known points have been extracted yet."
-                  items={data.keySignals}
-                  title="Known Points"
-                />
-                <ListSection
-                  emptyLabel="No open questions are currently listed."
-                  items={data.openQuestions}
-                  title="Missing Info"
-                />
-                <ListSection
-                  emptyLabel="No next actions were returned."
-                  items={data.recommendedActions}
-                  title="Next Actions"
-                />
-                {data.preliminary ? (
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 text-sm text-amber-700 dark:text-amber-300">
-                    This briefing is preliminary and should be treated as supportive guidance, not final intelligence.
-                  </div>
-                ) : null}
-              </div>
-            )}
-            resource={briefing}
-          />
-        </PanelCard>
+        <PhaseCard icon={FileText} title="Workbook Enrichment">
+          {workbookProfile.loading || workbookReview.loading ? (
+            <SkeletonCard lines={5} />
+          ) : (
+            <div className="space-y-4">
+              <MetaRow
+                availability={workbookPhase.availability}
+                updatedLabel={workbookPhase.updatedLabel}
+                version={workbookPhase.version}
+              />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {workbookPhase.summary}
+              </p>
+              <ListSection
+                emptyLabel="Workbook coverage details will appear once enrichment is available."
+                items={[
+                  ...(workbookProfile.data?.sheetStats.map(sanitizeWorkbookCoverage) ?? []),
+                  ...(workbookProfile.data?.trackedSheets ?? []),
+                ]}
+                title="Workbook Coverage"
+              />
+              <ListSection
+                emptyLabel="No workbook comparison issues are currently listed."
+                items={
+                  workbookReview.data?.findings.map(
+                    (finding) => sanitizeWorkbookFinding(`${finding.title}: ${finding.detail}`),
+                  ) ?? workbookPhase.actions.map(sanitizeWorkbookFinding)
+                }
+                title="What Needs Review"
+              />
+            </div>
+          )}
+        </PhaseCard>
 
         {viewMode === "working" ? (
-          <>
-            <PanelCard icon={CheckCheck} title="Workbook Profile">
-              <ResourceShell
-                emptyDescription="The workbook profile is not available yet for this RFQ."
-                emptyTitle="Workbook profile unavailable"
-                render={(data) => (
-                  <div className="space-y-4">
-                    <MetaRow
-                      availability={data.availability}
-                      updatedLabel={data.updatedLabel}
-                      version={data.version}
-                    />
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {data.summary}
-                    </p>
-                    {data.sheetStats.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {data.sheetStats.map((stat) => (
-                          <Badge key={stat} variant="default">
-                            {stat}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
-                    <ListSection
-                      emptyLabel="No tracked sheets are listed."
-                      items={data.trackedSheets}
-                      title="Tracked Sheets"
-                    />
-                    <ListSection
-                      emptyLabel="No missing sections are listed."
-                      items={data.missingSections}
-                      title="Missing Sections"
-                    />
-                    <ListSection
-                      emptyLabel="No workbook notes are currently available."
-                      items={data.notes}
-                      title="Notes"
-                    />
-                  </div>
-                )}
-                resource={workbookProfile}
+          <PhaseCard icon={BarChart3} title="Historical Insights">
+            <div className="space-y-4">
+              <MetaRow availability={historicalPhase.availability} />
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {historicalPhase.summary}
+              </p>
+              <ListSection
+                emptyLabel="Historical maturity notes are not currently available."
+                items={historicalPhase.details.map(sanitizeHistoricalSignal)}
+                title="Current Maturity Signals"
               />
-            </PanelCard>
-
-            <PanelCard icon={Flag} title="Workbook Review">
-              <ResourceShell
-                emptyDescription="The workbook review report is not available yet for this RFQ."
-                emptyTitle="Workbook review unavailable"
-                render={(data) => (
-                  <div className="space-y-4">
-                    <MetaRow
-                      availability={data.availability}
-                      updatedLabel={data.updatedLabel}
-                      version={data.version}
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      {typeof data.activeFindingsCount === "number" ? (
-                        <Badge variant="gold">{data.activeFindingsCount} active finding(s)</Badge>
-                      ) : null}
-                      {data.unavailableFamilies.map((family) => (
-                        <Badge key={family} variant="pending">
-                          {family.replaceAll("_", " ")}
-                        </Badge>
-                      ))}
-                    </div>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {data.summary}
-                    </p>
-                    {data.findings.length > 0 ? (
-                      <div className="space-y-2">
-                        {data.findings.map((finding) => (
-                          <div key={finding.id} className="stat-cell">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="text-sm font-medium text-foreground">
-                                {finding.title}
-                              </div>
-                              <Badge
-                                variant={
-                                  finding.severity === "high"
-                                    ? "rose"
-                                    : finding.severity === "medium"
-                                      ? "gold"
-                                      : "steel"
-                                }
-                              >
-                                {finding.severity}
-                              </Badge>
-                            </div>
-                            <div className="mt-1.5 text-sm text-muted-foreground">
-                              {finding.detail}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
-                        No active workbook review findings are currently listed.
-                      </div>
-                    )}
-                  </div>
-                )}
-                resource={workbookReview}
+              <ListSection
+                emptyLabel="No historical readiness guidance is currently listed."
+                items={historicalPhase.actions}
+                title="What Will Unlock This Phase"
               />
-            </PanelCard>
-          </>
+            </div>
+          </PhaseCard>
         ) : null}
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { demoRfqStatusMeta } from "@/demo/manager/status";
 import type {
   ManagerApiRfqAnalytics,
   ManagerApiRfqDetail,
@@ -11,10 +12,10 @@ import type {
 } from "@/models/manager/api-stage";
 import type {
   DashboardMetricModel,
+  LiveManagerRfqStatus,
   ManagerMetricResponse,
   ManagerRfqDetailResponse,
   ManagerRfqListItemResponse,
-  ManagerRfqStatus,
   RfqCardModel,
   RfqDetailModel,
   RfqFileModel,
@@ -34,7 +35,7 @@ import {
   formatPercent,
 } from "@/utils/format";
 import { resolveEstimatedSubmissionDateValue } from "@/utils/estimated-submission";
-import { rfqStatusMeta } from "@/utils/status";
+import { liveRfqStatusMeta } from "@/utils/status";
 
 function resolveMetricValue(metric: ManagerMetricResponse) {
   switch (metric.unit) {
@@ -117,7 +118,7 @@ export function translateRfqCard(
     dueDateValue: item.dueDate,
     dueLabel: formatDate(item.dueDate),
     status: item.status,
-    statusLabel: rfqStatusMeta[item.status].label,
+    statusLabel: demoRfqStatusMeta[item.status].label,
     outcomeReason: item.outcomeReason,
     intelligenceState: item.intelligenceState,
     priority: item.priority,
@@ -189,6 +190,24 @@ export function translateRfqDetail(
   item: ManagerRfqDetailResponse,
 ): RfqDetailModel {
   const card = translateRfqCard(item);
+  const sourcePackageFile = resolveMilestoneFile(item.recentFiles, "Client RFQ");
+  const workbookFile = resolveMilestoneFile(item.recentFiles, "Estimation Workbook");
+  const sourcePackageUpload = resolveMilestoneUpload(item.uploads, "zip");
+  const workbookUpload = resolveMilestoneUpload(item.uploads, "workbook");
+  const sourcePackageUpdatedAt =
+    item.sourcePackageUpdatedAt ??
+    sourcePackageFile?.uploadedAt ??
+    sourcePackageUpload?.uploadedAt;
+  const workbookUpdatedAt =
+    item.workbookUpdatedAt ??
+    workbookFile?.uploadedAt ??
+    workbookUpload?.uploadedAt;
+  const sourcePackageAvailable =
+    (item.sourcePackageAvailable ?? Boolean(sourcePackageFile)) ||
+    Boolean(sourcePackageUpload?.fileName);
+  const workbookAvailable =
+    (item.workbookAvailable ?? Boolean(workbookFile)) ||
+    Boolean(workbookUpload?.fileName);
 
   return {
     ...card,
@@ -197,6 +216,16 @@ export function translateRfqDetail(
     outcomeReason: item.outcomeReason,
     procurementLead: item.procurementLead,
     estimatedSubmissionLabel: formatDate(item.estimatedSubmissionDate),
+    sourcePackageAvailable,
+    sourcePackageUpdatedAtValue: sourcePackageUpdatedAt,
+    sourcePackageUpdatedLabel: sourcePackageUpdatedAt
+      ? formatDate(sourcePackageUpdatedAt)
+      : undefined,
+    workbookAvailable,
+    workbookUpdatedAtValue: workbookUpdatedAt,
+    workbookUpdatedLabel: workbookUpdatedAt
+      ? formatDate(workbookUpdatedAt)
+      : undefined,
     stageNotes: item.stageNotes.map(translateStageNote),
     recentFiles: item.recentFiles.map(translateRecentFile),
     subtasks: item.subtasks.map(translateSubtask),
@@ -204,10 +233,8 @@ export function translateRfqDetail(
   };
 }
 
-const liveStatusMap: Record<ManagerApiRfqStatus, ManagerRfqStatus> = {
-  Draft: "draft",
+const liveStatusMap: Record<ManagerApiRfqStatus, LiveManagerRfqStatus> = {
   "In preparation": "in_preparation",
-  Submitted: "submitted",
   Awarded: "awarded",
   Lost: "lost",
   Cancelled: "cancelled",
@@ -256,8 +283,46 @@ export function translateManagerStats(
   ];
 }
 
-function normalizeManagerStatus(status: ManagerApiRfqStatus): ManagerRfqStatus {
+function normalizeManagerStatus(status: ManagerApiRfqStatus): LiveManagerRfqStatus {
   return liveStatusMap[status];
+}
+
+function buildLiveStageHistory(
+  item: ManagerApiRfqSummary,
+): RfqCardModel["stageHistory"] {
+  if (
+    !item.current_stage_id
+    || !item.current_stage_name
+    || item.current_stage_order == null
+  ) {
+    return [];
+  }
+
+  const normalizedStageStatus = item.current_stage_status?.trim().toLowerCase();
+  const state =
+    item.current_stage_blocker_status === "Blocked"
+      ? "blocked"
+      : normalizedStageStatus === "completed"
+        ? "completed"
+        : normalizedStageStatus === "skipped"
+          ? "skipped"
+          : normalizedStageStatus === "in progress"
+            ? "active"
+            : "upcoming";
+
+  return [
+    {
+      id: item.current_stage_id,
+      label: item.current_stage_name,
+      order: item.current_stage_order,
+      state,
+      blockerReasonCode:
+        state === "blocked"
+          ? item.current_stage_blocker_reason_code ?? undefined
+          : undefined,
+      statusLabel: item.current_stage_status ?? undefined,
+    },
+  ];
 }
 
 export function translateManagerRfqCard(
@@ -265,6 +330,7 @@ export function translateManagerRfqCard(
 ): RfqCardModel {
   const status = normalizeManagerStatus(item.status);
   const isBlocked = item.current_stage_blocker_status === "Blocked";
+  const stageHistory = buildLiveStageHistory(item);
 
   return {
     id: item.id,
@@ -277,12 +343,12 @@ export function translateManagerRfqCard(
     dueDateValue: item.deadline,
     dueLabel: formatDate(item.deadline),
     status,
-    statusLabel: rfqStatusMeta[status].label,
+    statusLabel: liveRfqStatusMeta[status].label,
     priority: item.priority,
     tags: [],
     stageLabel: item.current_stage_name ?? "No active stage",
     rfqProgress: item.progress,
-    stageHistory: [],
+    stageHistory,
     blockerStatus: isBlocked ? "Blocked" : undefined,
     blockerReasonCode: isBlocked
       ? item.current_stage_blocker_reason_code ?? undefined
@@ -309,6 +375,16 @@ export function translateManagerRfqDetail(
     description: detail.description ?? undefined,
     industry: detail.industry ?? undefined,
     currentStageId: detail.current_stage_id ?? null,
+    sourcePackageAvailable: detail.source_package_available,
+    sourcePackageUpdatedAtValue: detail.source_package_updated_at ?? undefined,
+    sourcePackageUpdatedLabel: detail.source_package_updated_at
+      ? formatDate(detail.source_package_updated_at)
+      : undefined,
+    workbookAvailable: detail.workbook_available,
+    workbookUpdatedAtValue: detail.workbook_updated_at ?? undefined,
+    workbookUpdatedLabel: detail.workbook_updated_at
+      ? formatDate(detail.workbook_updated_at)
+      : undefined,
     outcomeReason: detail.outcome_reason ?? undefined,
     stageHistory,
     blockerStatus:
@@ -340,30 +416,52 @@ export function translateManagerAnalytics(
         value: analytics.win_rate,
         displayValue: formatPercent(analytics.win_rate),
         helper: "Awarded share across the manager analytics baseline.",
+        isAvailable: true,
         tone: "emerald",
       },
       {
         id: "estimation-accuracy",
         label: "Estimation Accuracy",
         value: analytics.estimation_accuracy,
-        displayValue: formatPercent(analytics.estimation_accuracy),
-        helper: "Manager-reported estimation accuracy.",
+        displayValue:
+          analytics.estimation_accuracy === null
+            ? "Unavailable"
+            : formatPercent(analytics.estimation_accuracy),
+        helper:
+          analytics.estimation_accuracy === null
+            ? "Not captured truthfully in live mode yet."
+            : "Manager-reported estimation accuracy.",
+        isAvailable: analytics.estimation_accuracy !== null,
         tone: "steel",
       },
       {
         id: "avg-margin-submitted",
         label: "Avg Margin Submitted",
         value: analytics.avg_margin_submitted,
-        displayValue: formatPercent(analytics.avg_margin_submitted),
-        helper: "Average margin across submitted RFQs.",
+        displayValue:
+          analytics.avg_margin_submitted === null
+            ? "Unavailable"
+            : formatPercent(analytics.avg_margin_submitted),
+        helper:
+          analytics.avg_margin_submitted === null
+            ? "Margin analytics are intentionally withheld until a reliable source exists."
+            : "Average margin across submitted RFQs.",
+        isAvailable: analytics.avg_margin_submitted !== null,
         tone: "gold",
       },
       {
         id: "avg-margin-awarded",
         label: "Avg Margin Awarded",
         value: analytics.avg_margin_awarded,
-        displayValue: formatPercent(analytics.avg_margin_awarded),
-        helper: "Average margin across awarded RFQs.",
+        displayValue:
+          analytics.avg_margin_awarded === null
+            ? "Unavailable"
+            : formatPercent(analytics.avg_margin_awarded),
+        helper:
+          analytics.avg_margin_awarded === null
+            ? "Margin analytics are intentionally withheld until a reliable source exists."
+            : "Average margin across awarded RFQs.",
+        isAvailable: analytics.avg_margin_awarded !== null,
         tone: "amber",
       },
     ],
@@ -374,7 +472,23 @@ export function translateManagerAnalytics(
         client: entry.client,
         rfqCount: entry.rfq_count,
         avgMarginValue: entry.avg_margin,
-        avgMarginLabel: formatPercent(entry.avg_margin),
+        avgMarginLabel:
+          entry.avg_margin === null ? "Unavailable" : formatPercent(entry.avg_margin),
+        isMarginAvailable: entry.avg_margin !== null,
       })),
   };
+}
+
+function resolveMilestoneFile(
+  files: ManagerRfqDetailResponse["recentFiles"],
+  type: string,
+) {
+  return files.find((file) => file.type === type);
+}
+
+function resolveMilestoneUpload(
+  uploads: ManagerRfqDetailResponse["uploads"],
+  kind: "zip" | "workbook",
+) {
+  return uploads.find((upload) => upload.kind === kind);
 }

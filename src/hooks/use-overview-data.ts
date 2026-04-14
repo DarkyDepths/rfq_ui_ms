@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+import { apiConfig } from "@/config/api";
 import { getDashboardMetrics, listRfqs } from "@/connectors/manager/rfqs";
+import { isDemoActiveRfqStatus } from "@/demo/manager/status";
 import type { RolePermissions } from "@/config/role-permissions";
 import { getRoleActorProfile } from "@/lib/manager-actor";
 import { filterRfqsForRole } from "@/lib/rfq-access";
 import type { RfqCardModel } from "@/models/manager/rfq";
 import type { AppRole } from "@/models/ui/role";
 import type { KPIMetricModel } from "@/models/ui/dashboard";
-import { isActiveRfqStatus } from "@/utils/status";
+import { isLiveActiveRfqStatus } from "@/utils/status";
 
 interface OverviewState {
   activeRfqs: RfqCardModel[];
@@ -36,7 +38,7 @@ function buildEstimatorMetrics(rfqs: RfqCardModel[]): KPIMetricModel[] {
     (rfq) =>
       rfq.intelligenceState === "failed"
       || rfq.intelligenceState === "partial"
-      || rfq.status === "attention_required",
+      || (apiConfig.useMockData && rfq.status === "attention_required"),
   ).length;
 
   return [
@@ -46,7 +48,7 @@ function buildEstimatorMetrics(rfqs: RfqCardModel[]): KPIMetricModel[] {
       label: "Assigned RFQs",
       tone: "steel",
       trendDirection: "steady",
-      trendLabel: "Scoped by owner/draft",
+      trendLabel: "Scoped by ownership",
       value: `${rfqs.length}`,
     },
     {
@@ -108,7 +110,9 @@ export function useOverviewData(role: AppRole, permissions: RolePermissions) {
         const rfqs = await listRfqs({ size: 20 });
         const scopedRfqs = filterRfqsForRole(role, permissions, rfqs, actorName);
         const activeRfqs = scopedRfqs.filter((rfq) =>
-          isActiveRfqStatus(rfq.status),
+          apiConfig.useMockData
+            ? isDemoActiveRfqStatus(rfq.status)
+            : isLiveActiveRfqStatus(rfq.status),
         );
         const metrics = permissions.canViewAnalytics
           ? await getDashboardMetrics()
