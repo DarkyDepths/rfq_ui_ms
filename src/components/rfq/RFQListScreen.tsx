@@ -11,9 +11,12 @@ import { RFQTable } from "@/components/rfq/RFQTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiConfig } from "@/config/api";
 import { getPermissions } from "@/config/role-permissions";
 import { useRole } from "@/context/role-context";
+import { parseDemoStatusFilter } from "@/demo/manager/status";
 import { useRfqList } from "@/hooks/use-rfq-list";
+import { getRfqStatusLabel } from "@/lib/rfq-status-display";
 import type { RfqCardModel } from "@/models/manager/rfq";
 import type {
   RfqMonitorLeadershipFilter,
@@ -21,15 +24,15 @@ import type {
 } from "@/lib/executive-insights";
 
 function parseStatusFilter(value: string | null): "all" | RfqCardModel["status"] {
+  if (apiConfig.useMockData) {
+    return parseDemoStatusFilter(value);
+  }
+
   switch (value) {
-    case "draft":
     case "in_preparation":
-    case "under_review":
-    case "submitted":
     case "awarded":
     case "lost":
     case "cancelled":
-    case "attention_required":
       return value;
     default:
       return "all";
@@ -96,7 +99,7 @@ function buildDrilldownBadges({
   if (status !== "all") {
     badges.push({
       label: "Status",
-      value: status.replaceAll("_", " "),
+      value: getRfqStatusLabel(status),
       variant: "steel",
     });
   }

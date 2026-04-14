@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { apiConfig } from "@/config/api";
 import { getReminderStats } from "@/connectors/manager/reminders";
 import type { ReminderStatsModel } from "@/models/manager/rfq";
 
@@ -21,6 +22,18 @@ export function useReminderSummary() {
 
   useEffect(() => {
     let active = true;
+
+    if (apiConfig.useMockData) {
+      setState({
+        error:
+          "Reminder service stays live-only in this phase. Switch to live mode for reminder summary truth.",
+        loading: false,
+        stats: null,
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     setState((current) => ({
       ...current,

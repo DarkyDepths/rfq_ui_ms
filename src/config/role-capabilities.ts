@@ -7,7 +7,7 @@ export type CapabilityScope =
   | "department-wide"
   | "all department RFQs"
   | "assigned RFQs"
-  | "own-created drafts"
+  | "new RFQs"
   | "own uploads";
 
 export type RoleCapabilityKey =
@@ -17,7 +17,6 @@ export type RoleCapabilityKey =
   | "rfq.workspace.operational.read"
   | "analytics.read"
   | "rfq.create"
-  | "rfq.draft.update"
   | "rfq.core.update"
   | "rfq.stage.update"
   | "rfq.stage.advance"
@@ -93,7 +92,6 @@ export const roleCapabilityBundles: Record<AppRole, RoleCapabilityBundle> = {
       "rfq.workspace.operational.read": grant("hidden", []),
       "analytics.read": grant("allowed", ["tenant-wide", "department-wide"]),
       "rfq.create": grant("hidden", []),
-      "rfq.draft.update": grant("hidden", []),
       "rfq.core.update": grant("hidden", []),
       "rfq.stage.update": grant("hidden", []),
       "rfq.stage.advance": grant("hidden", []),
@@ -159,7 +157,6 @@ export const roleCapabilityBundles: Record<AppRole, RoleCapabilityBundle> = {
       "rfq.workspace.operational.read": grant("allowed", ["department-wide"]),
       "analytics.read": grant("allowed", ["department-wide"]),
       "rfq.create": grant("allowed", ["department-wide"]),
-      "rfq.draft.update": grant("allowed", ["department-wide"]),
       "rfq.core.update": grant("allowed", ["department-wide"]),
       "rfq.stage.update": grant("allowed", ["department-wide"]),
       "rfq.stage.advance": grant("allowed", ["department-wide"]),
@@ -201,7 +198,7 @@ export const roleCapabilityBundles: Record<AppRole, RoleCapabilityBundle> = {
         "Estimator access stays on assignments and contributor work rather than portfolio analytics.",
       dashboardTitle: "Estimator View",
       listSubtitle:
-        "Assigned RFQs and own drafts, with contributor-only lifecycle and intelligence access.",
+        "Assigned RFQs with contributor-only lifecycle and intelligence access.",
       listTitle: "Assigned RFQ Worklist",
       overviewSubtitle:
         "Assigned RFQs, next actions, and scoped contributor signals for your working set.",
@@ -209,20 +206,19 @@ export const roleCapabilityBundles: Record<AppRole, RoleCapabilityBundle> = {
     },
     capabilities: {
       "portfolio.monitor.read": grant("hidden", []),
-      "rfq.lifecycle.read": grant("allowed", ["assigned RFQs", "own-created drafts"]),
-      "rfq.intelligence.summary.read": grant("allowed", ["assigned RFQs", "own-created drafts"]),
+      "rfq.lifecycle.read": grant("allowed", ["assigned RFQs"]),
+      "rfq.intelligence.summary.read": grant("allowed", ["assigned RFQs"]),
       "rfq.workspace.operational.read": grant(
         "read_only",
-        ["assigned RFQs", "own-created drafts"],
+        ["assigned RFQs"],
       ),
       "analytics.read": grant("hidden", []),
-      "rfq.create": grant("allowed", ["own-created drafts"]),
-      "rfq.draft.update": grant("allowed", ["own-created drafts"]),
+      "rfq.create": grant("allowed", ["new RFQs"]),
       "rfq.core.update": grant("hidden", []),
       "rfq.stage.update": grant("hidden", []),
       "rfq.stage.advance": grant("hidden", []),
-      "subtask.manage": grant("allowed", ["assigned RFQs", "own-created drafts"]),
-      "file.upload": grant("allowed", ["assigned RFQs", "own-created drafts"]),
+      "subtask.manage": grant("allowed", ["assigned RFQs"]),
+      "file.upload": grant("allowed", ["assigned RFQs"]),
       "file.delete": grant("allowed", ["own uploads"]),
       "rfq.stage.note.write": grant("hidden", []),
       "reminder.manage": grant("hidden", []),
@@ -232,10 +228,10 @@ export const roleCapabilityBundles: Record<AppRole, RoleCapabilityBundle> = {
       "leadership_note.acknowledge": grant("hidden", []),
       "leadership_note.reply": grant("hidden", []),
       "leadership_note.close": grant("hidden", []),
-      "rfq.intelligence.supportive.read": grant("allowed", ["assigned RFQs", "own-created drafts"]),
+      "rfq.intelligence.supportive.read": grant("allowed", ["assigned RFQs"]),
       "rfq.intelligence.diagnostics.read": grant(
         "read_only",
-        ["assigned RFQs", "own-created drafts"],
+        ["assigned RFQs"],
       ),
       "rfq.intelligence.reprocess": grant("hidden", []),
     },

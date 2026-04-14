@@ -6,6 +6,7 @@ import type { RolePermissions } from "@/config/role-permissions";
 import { apiConfig } from "@/config/api";
 import { listLeadershipNotes } from "@/connectors/manager/leadership-notes";
 import { listRfqs } from "@/connectors/manager/rfqs";
+import { demoStatusOptions } from "@/demo/manager/status";
 import {
   applyRfqMonitorDrilldown,
   type RfqMonitorDrilldownFilters,
@@ -137,23 +138,10 @@ export function useRfqList(
     label: string;
     value: "all" | RfqCardModel["status"];
   }> = apiConfig.useMockData
-    ? [
-        { label: "All", value: "all" },
-        { label: "Draft", value: "draft" },
-        { label: "In Preparation", value: "in_preparation" },
-        { label: "Under Review", value: "under_review" },
-        { label: "Submitted", value: "submitted" },
-        { label: "Awarded", value: "awarded" },
-        { label: "Lost", value: "lost" },
-        { label: "Cancelled", value: "cancelled" },
-        { label: "Partial / Warning", value: "attention_required" },
-      ]
+    ? demoStatusOptions
     : [
         { label: "All", value: "all" },
-        { label: "Draft", value: "draft" },
         { label: "In Preparation", value: "in_preparation" },
-        { label: "Under Review", value: "under_review" },
-        { label: "Submitted", value: "submitted" },
         { label: "Awarded", value: "awarded" },
         { label: "Lost", value: "lost" },
         { label: "Cancelled", value: "cancelled" },

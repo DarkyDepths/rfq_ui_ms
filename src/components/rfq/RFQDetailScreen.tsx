@@ -357,9 +357,14 @@ export function RFQDetailScreen({ rfqId }: { rfqId: string }) {
                 permissions={permissions}
                 rfqOutcomeReason={rfq.outcomeReason}
                 rfqStatus={rfq.status}
+                sourcePackageAvailable={rfq.sourcePackageAvailable}
+                sourcePackageUpdatedLabel={rfq.sourcePackageUpdatedLabel}
+                workbookAvailable={rfq.workbookAvailable}
+                workbookUpdatedLabel={rfq.workbookUpdatedLabel}
               />
               <IntelligencePanel
                 briefing={intelligence.briefing}
+                rfq={rfq}
                 snapshot={intelligence.snapshot}
                 staleIntel={intelligence.staleIntel}
                 viewMode="working"

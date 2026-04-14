@@ -19,13 +19,6 @@ export function matchesActorName(actorName: string, candidate?: string | null) {
   return normalizedActor.length > 0 && normalizedActor === normalizedCandidate;
 }
 
-export function isOwnCreatedDraft(
-  rfq: ScopedRfq,
-  actorName: string,
-) {
-  return rfq.status === "draft" && matchesActorName(actorName, rfq.owner);
-}
-
 export function isAssignedRfq(
   rfq: ScopedRfq,
   actorName: string,
@@ -37,7 +30,7 @@ export function hasScopedEstimatorAccess(
   rfq: ScopedRfq,
   actorName: string,
 ) {
-  return isAssignedRfq(rfq, actorName) || isOwnCreatedDraft(rfq, actorName);
+  return isAssignedRfq(rfq, actorName);
 }
 
 export function canReadRfqLifecycle(
@@ -76,23 +69,6 @@ export function canReadOperationalWorkspace(
   }
 
   return hasScopedEstimatorAccess(rfq, actorName);
-}
-
-export function canEditDraftRfq(
-  role: AppRole,
-  permissions: RolePermissions,
-  rfq: ScopedRfq,
-  actorName: string,
-) {
-  if (permissions.canEditCoreRfq) {
-    return true;
-  }
-
-  if (role !== "estimator" || !permissions.canEditDraftRfq) {
-    return false;
-  }
-
-  return isOwnCreatedDraft(rfq, actorName);
 }
 
 export function canManageSubtasks(

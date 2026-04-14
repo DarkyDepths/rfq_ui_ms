@@ -63,6 +63,7 @@ import { SkeletonCard } from "@/components/common/SkeletonCard";
 import { UploadZone } from "@/components/common/UploadZone";
 import { getRoleActorProfile } from "@/lib/manager-actor";
 import { getRfqBusinessIdentity } from "@/lib/rfq-display";
+import { getRfqStatusMeta } from "@/lib/rfq-status-display";
 import {
   buildWorkflowDeadlineTooNarrowMessage,
   formatWorkflowDeadlineIso,
@@ -130,13 +131,12 @@ import {
 } from "@/utils/format";
 import {
   canDeleteStageFile,
-  canEditDraftRfq,
   canReadEscalationState,
   canReadOperationalWorkspace,
   canManageSubtasks as canManageScopedSubtasks,
   canUploadStageFiles,
 } from "@/lib/rfq-access";
-import { isTerminalRfqStatus, rfqStatusMeta } from "@/utils/status";
+import { isTerminalRfqStatus } from "@/utils/status";
 import {
   getSubtaskCreateValidationMessage,
   getSubtaskDueDateValidationMessage,
@@ -556,8 +556,7 @@ export function RfqOperationalWorkspace({
   const canManageSubtasks = canManageScopedSubtasks(role, permissions, rfq, actorName);
   const canManageReminders = permissions.canManageReminders && canReadWorkspace;
   const canReadReminderState = canReadEscalationState(role, permissions, rfq, actorName);
-  const canEditDraft = canEditDraftRfq(role, permissions, rfq, actorName);
-  const canEditRfq = permissions.canEditCoreRfq || canEditDraft;
+  const canEditRfq = permissions.canEditCoreRfq;
   const isTerminalRfq = isTerminalRfqStatus(rfq.status);
   const canEditLifecycleControls = canEditRfq && !isTerminalRfq;
   const canUploadFiles = canUploadStageFiles(role, permissions, rfq, actorName);
@@ -2117,12 +2116,6 @@ export function RfqOperationalWorkspace({
           Contributor mode is active. You can work on scoped files and subtasks, but stage truth, reminders, and operational notes remain manager-owned.
         </div>
       ) : null}
-      {canEditDraft && !permissions.canEditCoreRfq ? (
-        <div className="rounded-xl border border-steel-500/20 bg-steel-500/10 p-4 text-sm text-steel-700 dark:text-steel-300">
-          Draft-phase access is active. You can still update this draft record until ownership transfers into the manager-controlled lifecycle.
-        </div>
-      ) : null}
-
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">
           <div className="surface-panel p-5">
@@ -3153,8 +3146,8 @@ export function RfqOperationalWorkspace({
                   <Label>Lifecycle Status</Label>
                   <div className="rounded-xl border border-border bg-muted/20 px-3 py-3 text-sm dark:bg-white/[0.02]">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={rfqStatusMeta[rfq.status].tone}>
-                        {rfqStatusMeta[rfq.status].label}
+                      <Badge variant={getRfqStatusMeta(rfq.status).tone}>
+                        {getRfqStatusMeta(rfq.status).label}
                       </Badge>
                       <span className="text-muted-foreground">
                         Status is derived by lifecycle truth. Use the dedicated cancel action for safe terminal invalidation.

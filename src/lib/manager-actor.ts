@@ -1,3 +1,4 @@
+import { apiConfig } from "@/config/api";
 import { appConfig } from "@/config/app";
 import { getRoleCapabilityBundle } from "@/config/role-capabilities";
 import type { AppRole } from "@/models/ui/role";
@@ -61,6 +62,10 @@ export function getRoleActorProfile(role: AppRole): RoleActorProfile {
 export function buildManagerActorHeaders(
   options?: ManagerActorOptions,
 ): HeadersInit {
+  if (!apiConfig.managerDebugHeadersEnabled) {
+    return {};
+  }
+
   const role = getCurrentAppRole();
   const actorProfile = getRoleActorProfile(role);
   const permissions = options?.permissions?.length

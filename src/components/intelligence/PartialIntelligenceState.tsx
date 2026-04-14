@@ -20,32 +20,32 @@ const stateMeta: Record<
   not_available_yet: {
     icon: Clock3,
     title: "Not Available Yet",
-    description: "The intelligence service has not produced this read model yet.",
+    description: "The needed RFQ inputs are not available yet for this intelligence step.",
   },
   pending: {
     icon: LoaderCircle,
-    title: "Awaiting Processing",
-    description: "Intelligence artifacts are still being generated for this RFQ.",
+    title: "Refreshing Intelligence",
+    description: "The latest intelligence summary is being refreshed for this RFQ.",
   },
   partial: {
     icon: Sparkles,
-    title: "Partial Intelligence",
-    description: "Some intelligence artifacts are available, while others are still incomplete.",
+    title: "Ready For Review",
+    description: "A useful intelligence summary is available, but it still needs human review.",
   },
   preliminary: {
     icon: Sparkles,
-    title: "Preliminary Intelligence",
-    description: "Initial intelligence is available, but it is still a supportive or stub-level slice.",
+    title: "Initial Guidance Ready",
+    description: "An early intelligence summary is available to support review of this RFQ.",
   },
   failed: {
     icon: AlertTriangle,
-    title: "Processing Failed",
-    description: "One or more intelligence stages failed and need follow-up.",
+    title: "Needs Attention",
+    description: "One or more intelligence steps could not be completed and need follow-up.",
   },
   available: {
     icon: Sparkles,
-    title: "Available Intelligence",
-    description: "The intelligence service returned an available artifact slice for this RFQ.",
+    title: "Ready",
+    description: "The current intelligence summary is available for this RFQ.",
   },
 };
 

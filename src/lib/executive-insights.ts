@@ -1,5 +1,7 @@
 import type { LeadershipNoteThreadModel } from "@/models/manager/leadership-note";
 import type { RfqCardModel } from "@/models/manager/rfq";
+import { getTerminalRfqOutcome, getRfqStatusLabel } from "@/lib/rfq-status-display";
+import { formatBlockerReasonLabel, getRfqBlockedSignal } from "@/utils/blocker-signal";
 import { isTerminalRfqStatus } from "@/utils/status";
 
 export type ExecutiveVisualTone = "steel" | "gold" | "emerald" | "rose" | "amber";
@@ -18,15 +20,6 @@ export interface ExecutiveAggregateEntry {
   count: number;
   label: string;
   tone?: ExecutiveVisualTone;
-}
-
-function toTitleCase(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
 }
 
 export function buildRfqMonitorHref(
@@ -103,17 +96,17 @@ export function getPrimaryDelayDriver(rfq: RfqCardModel): {
     return null;
   }
 
-  const blockedStage = rfq.stageHistory.find((stage) => stage.state === "blocked");
-  if (blockedStage?.blockerReasonCode) {
+  const blockedSignal = getRfqBlockedSignal(rfq);
+  if (blockedSignal.isBlocked && rfq.blockerReasonCode) {
     return {
-      label: toTitleCase(blockedStage.blockerReasonCode),
+      label: formatBlockerReasonLabel(rfq.blockerReasonCode) ?? "Blocked",
       tone: "rose",
     };
   }
 
-  if (blockedStage) {
+  if (blockedSignal.isBlocked) {
     return {
-      label: `Blocked in ${blockedStage.label}`,
+      label: `Blocked in ${blockedSignal.stageLabel ?? rfq.stageLabel}`,
       tone: "rose",
     };
   }
@@ -122,13 +115,6 @@ export function getPrimaryDelayDriver(rfq: RfqCardModel): {
     return {
       label: "Overdue Without Captured Blocker",
       tone: "rose",
-    };
-  }
-
-  if (rfq.status === "attention_required") {
-    return {
-      label: "Attention Required",
-      tone: "gold",
     };
   }
 
@@ -150,7 +136,7 @@ export function getPrimaryDelayDriver(rfq: RfqCardModel): {
 }
 
 export function getLossReasonLabel(rfq: RfqCardModel) {
-  if (rfq.status !== "lost") {
+  if (getTerminalRfqOutcome(rfq.status) !== "lost") {
     return null;
   }
 
@@ -158,16 +144,9 @@ export function getLossReasonLabel(rfq: RfqCardModel) {
 }
 
 export function getLifecycleDistributionLabel(rfq: RfqCardModel) {
-  if (rfq.status === "awarded") {
-    return "Awarded";
-  }
-
-  if (rfq.status === "lost") {
-    return "Lost";
-  }
-
-  if (rfq.status === "cancelled") {
-    return "Cancelled";
+  const terminalOutcome = getTerminalRfqOutcome(rfq.status);
+  if (terminalOutcome) {
+    return getRfqStatusLabel(terminalOutcome);
   }
 
   return rfq.stageLabel;
@@ -280,7 +259,7 @@ export function applyRfqMonitorDrilldown(
       return false;
     }
 
-    if (filters.signal === "blocked" && !rfq.stageHistory.some((stage) => stage.state === "blocked")) {
+    if (filters.signal === "blocked" && !getRfqBlockedSignal(rfq).isBlocked) {
       return false;
     }
 

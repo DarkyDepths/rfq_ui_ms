@@ -219,7 +219,7 @@ export function RFQOverviewScreen() {
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 {role === "manager"
                   ? "You see the operational portfolio queue and can create or advance RFQs. For macro intelligence, view the Dashboard."
-                  : "You see assigned RFQs and own drafts. Stage truth, reminders, and portfolio controls remain manager-owned."}
+                  : "You see assigned RFQs only. Stage truth, reminders, and portfolio controls remain manager-owned."}
               </p>
             </div>
           </motion.div>

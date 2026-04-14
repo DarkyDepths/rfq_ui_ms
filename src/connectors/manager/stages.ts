@@ -126,12 +126,21 @@ function buildActionOptions(
   };
 }
 
+function ensureLiveStageMutationsEnabled() {
+  if (apiConfig.useMockData) {
+    throw new Error(
+      "Stage mutations are disabled in demo mode. Switch to live mode to write stage data.",
+    );
+  }
+}
+
 export async function updateStage(
   rfqId: string,
   stageId: string,
   input: StageUpdateInput,
   options?: StageActionOptions,
 ): Promise<StageWorkspaceModel> {
+  ensureLiveStageMutationsEnabled();
   const response = await requestManagerJson<ManagerApiStageDetail>(
     `/rfqs/${rfqId}/stages/${stageId}`,
     {
@@ -152,6 +161,7 @@ export async function advanceStage(
   input: StageAdvanceInput = {},
   options?: StageActionOptions,
 ): Promise<StageWorkspaceModel> {
+  ensureLiveStageMutationsEnabled();
   const response = await requestManagerJson<ManagerApiStageDetail>(
     `/rfqs/${rfqId}/stages/${stageId}/advance`,
     {
@@ -175,6 +185,7 @@ export async function addStageNote(
   text: string,
   options?: StageActionOptions,
 ): Promise<StageNoteModel> {
+  ensureLiveStageMutationsEnabled();
   const response = await requestManagerJson<{
     id: string;
     user_name: string;
@@ -199,6 +210,7 @@ export async function uploadStageFile(
   type: string,
   options?: StageActionOptions,
 ): Promise<RfqFileModel> {
+  ensureLiveStageMutationsEnabled();
   const formData = new FormData();
   formData.append("file", file);
   formData.append("type", type);
@@ -225,6 +237,7 @@ export async function uploadStageFile(
 }
 
 export async function deleteStageFile(fileId: string): Promise<void> {
+  ensureLiveStageMutationsEnabled();
   await requestManagerJson<void>(`/files/${fileId}`, {
     method: "DELETE",
   });
@@ -236,6 +249,7 @@ export async function createSubtask(
   input: SubtaskCreateInput,
   options?: StageActionOptions,
 ): Promise<void> {
+  ensureLiveStageMutationsEnabled();
   await requestManagerJson(
     `/rfqs/${rfqId}/stages/${stageId}/subtasks`,
     {
@@ -257,6 +271,7 @@ export async function updateSubtask(
   input: SubtaskUpdateInput,
   options?: StageActionOptions,
 ): Promise<void> {
+  ensureLiveStageMutationsEnabled();
   await requestManagerJson(
     `/rfqs/${rfqId}/stages/${stageId}/subtasks/${subtaskId}`,
     {
@@ -279,6 +294,7 @@ export async function deleteSubtask(
   subtaskId: string,
   options?: StageActionOptions,
 ): Promise<void> {
+  ensureLiveStageMutationsEnabled();
   await requestManagerJson<void>(
     `/rfqs/${rfqId}/stages/${stageId}/subtasks/${subtaskId}`,
     {

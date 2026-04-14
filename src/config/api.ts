@@ -1,9 +1,9 @@
-const useMockData =
-  process.env.NEXT_PUBLIC_USE_MOCK_DATA === undefined ||
-  process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
 export const apiConfig = {
   useMockData,
+  managerDebugHeadersEnabled:
+    process.env.NEXT_PUBLIC_MANAGER_DEBUG_HEADERS_ENABLED === "true",
   demoLatencyMs: Number(process.env.NEXT_PUBLIC_DEMO_LATENCY_MS ?? 650),
   managerBaseUrl:
     process.env.NEXT_PUBLIC_MANAGER_API_URL ?? "http://localhost:8000",

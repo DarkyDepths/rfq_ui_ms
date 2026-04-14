@@ -3,33 +3,25 @@ import type {
   ArtifactStatus,
 } from "@/models/intelligence/artifacts";
 import type { IntelligenceAvailabilityState } from "@/models/intelligence/snapshot";
-import type { ManagerRfqStatus } from "@/models/manager/rfq";
+import type {
+  LiveManagerRfqStatus,
+  ManagerRfqStatus,
+} from "@/models/manager/rfq";
 
 export const terminalRfqStatuses = ["awarded", "lost", "cancelled"] as const;
 const terminalRfqStatusSet = new Set<ManagerRfqStatus>(terminalRfqStatuses);
+const liveActiveRfqStatusSet = new Set<ManagerRfqStatus>(["in_preparation"]);
 
-export const rfqStatusMeta: Record<
-  ManagerRfqStatus,
+export const liveRfqStatusMeta: Record<
+  LiveManagerRfqStatus,
   {
     label: string;
     tone: "steel" | "gold" | "emerald" | "rose" | "pending";
   }
 > = {
-  draft: {
-    label: "Draft",
-    tone: "pending",
-  },
   in_preparation: {
     label: "In Preparation",
     tone: "pending",
-  },
-  under_review: {
-    label: "Under Review",
-    tone: "steel",
-  },
-  submitted: {
-    label: "Submitted",
-    tone: "steel",
   },
   awarded: {
     label: "Awarded",
@@ -42,10 +34,6 @@ export const rfqStatusMeta: Record<
   cancelled: {
     label: "Cancelled",
     tone: "rose",
-  },
-  attention_required: {
-    label: "Partial / Warning",
-    tone: "gold",
   },
 };
 
@@ -151,6 +139,6 @@ export function isTerminalRfqStatus(status: ManagerRfqStatus) {
   return terminalRfqStatusSet.has(status);
 }
 
-export function isActiveRfqStatus(status: ManagerRfqStatus) {
-  return status !== "draft" && !isTerminalRfqStatus(status);
+export function isLiveActiveRfqStatus(status: ManagerRfqStatus) {
+  return liveActiveRfqStatusSet.has(status);
 }

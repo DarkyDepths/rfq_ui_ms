@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRight, FilePlus2, RefreshCw, RotateCw, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { RolePermissions } from "@/config/role-permissions";
+import {
+  getRfqStatusLabel,
+  getTerminalRfqOutcome,
+} from "@/lib/rfq-status-display";
 import type { ReprocessKind } from "@/models/intelligence/artifacts";
 import type { IntelligenceLifecycleTriggerResult } from "@/models/intelligence/triggers";
 import type { ManagerRfqStatus } from "@/models/manager/rfq";
@@ -15,24 +19,70 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 function formatTriggerMessage(result: IntelligenceLifecycleTriggerResult) {
-  const artifacts = result.artifacts
-    ? Object.entries(result.artifacts)
-        .map(([key, value]) =>
-          value?.status ? `${key.replaceAll("_", " ")}: ${value.status}` : null,
-        )
-        .filter(Boolean)
-    : [];
+  if (result.eventType === "rfq.created") {
+    if (result.status === "duplicate") {
+      return "Package intelligence is already up to date for this RFQ.";
+    }
 
-  const base = result.status.replaceAll("_", " ");
-  return artifacts.length > 0 ? `${base}. ${artifacts.join(" · ")}` : base;
-}
-
-function mapStatusToOutcome(status: ManagerRfqStatus) {
-  if (status === "awarded" || status === "lost" || status === "cancelled") {
-    return status;
+    if (result.status === "processed") {
+      return "Package intelligence is ready. You can now review the initial summary of the client RFQ package.";
+    }
   }
 
-  return null;
+  if (result.eventType === "workbook.uploaded") {
+    if (result.status === "duplicate") {
+      return "Workbook enrichment is already up to date for this RFQ.";
+    }
+
+    if (result.status === "processed_with_failures") {
+      return "Workbook enrichment finished with follow-up items. Review the workbook findings before relying on them.";
+    }
+
+    if (result.status === "processed") {
+      return "Workbook enrichment is ready. You can now review how the estimator workbook compares with the RFQ package.";
+    }
+  }
+
+  if (result.eventType === "outcome.recorded") {
+    if (result.status === "duplicate") {
+      return "Outcome-based enrichment is already current for this RFQ.";
+    }
+
+    if (result.status === "processed") {
+      return "Outcome enrichment refreshed for this RFQ.";
+    }
+  }
+
+  return result.status.replaceAll("_", " ");
+}
+
+function PhaseCard({
+  action,
+  badge,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  badge: ReactNode;
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/20 p-4 dark:bg-white/[0.02]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-foreground">{title}</div>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {badge}
+          {action}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function IntelligenceActionsPanel({
@@ -44,6 +94,10 @@ export function IntelligenceActionsPanel({
   permissions,
   rfqOutcomeReason,
   rfqStatus,
+  sourcePackageAvailable,
+  sourcePackageUpdatedLabel,
+  workbookAvailable,
+  workbookUpdatedLabel,
 }: {
   onRefresh: () => void;
   onReprocess: (kind: ReprocessKind) => Promise<{ message: string }>;
@@ -56,11 +110,15 @@ export function IntelligenceActionsPanel({
   permissions: RolePermissions;
   rfqOutcomeReason?: string;
   rfqStatus: ManagerRfqStatus;
+  sourcePackageAvailable: boolean;
+  sourcePackageUpdatedLabel?: string;
+  workbookAvailable: boolean;
+  workbookUpdatedLabel?: string;
 }) {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const terminalOutcome = mapStatusToOutcome(rfqStatus);
+  const terminalOutcome = getTerminalRfqOutcome(rfqStatus);
   const canTrigger = permissions.canTriggerIntelligence;
 
   async function runAction<T>(
@@ -107,35 +165,98 @@ export function IntelligenceActionsPanel({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Intelligence Triggers
+                Intelligence Phases
               </h3>
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                Trigger the supported intelligence flows directly from the app. This bridges the current event-bus gap without leaving the UI.
+                Package intelligence begins once the RFQ package is available. Workbook enrichment remains a later-phase step after the estimator workbook exists.
+              </p>
+            </div>
+            <Button onClick={onRefresh} size="sm" variant="ghost">
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </Button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <PhaseCard
+              title="Package Intelligence"
+              description={
+                sourcePackageAvailable
+                  ? `RFQ package is available${sourcePackageUpdatedLabel ? ` and was last updated ${sourcePackageUpdatedLabel}` : ""}. Generate the first package summary when you are ready to review the incoming request.`
+                  : "Waiting for RFQ package upload. Package intelligence starts as soon as the incoming client RFQ package is attached."
+              }
+              badge={
+                <Badge variant={sourcePackageAvailable ? "emerald" : "pending"}>
+                  {sourcePackageAvailable ? "Package Ready" : "Waiting on Package"}
+                </Badge>
+              }
+              action={
+                sourcePackageAvailable ? (
+                  <Button
+                    disabled={busyAction === "trigger-intake"}
+                    onClick={() =>
+                      void runAction("trigger-intake", onTriggerIntake, formatTriggerMessage)
+                    }
+                    size="sm"
+                    variant="secondary"
+                  >
+                    <WandSparkles className="h-3.5 w-3.5" />
+                    Run Package Intelligence
+                  </Button>
+                ) : undefined
+              }
+            />
+
+            <PhaseCard
+              title="Workbook Enrichment"
+              description={
+                workbookAvailable
+                  ? `Late-lifecycle estimator workbook is available${workbookUpdatedLabel ? ` and was last updated ${workbookUpdatedLabel}` : ""}. Run workbook enrichment when you want to compare the estimator output with the original RFQ package.`
+                  : "Waiting for workbook upload. Workbook enrichment starts only after the estimator workbook exists."
+              }
+              badge={
+                <Badge variant={workbookAvailable ? "emerald" : "pending"}>
+                  {workbookAvailable ? "Workbook Ready" : "Waiting on Workbook"}
+                </Badge>
+              }
+              action={
+                workbookAvailable ? (
+                  <Button
+                    disabled={busyAction === "trigger-workbook"}
+                    onClick={() =>
+                      void runAction("trigger-workbook", onTriggerWorkbook, formatTriggerMessage)
+                    }
+                    size="sm"
+                    variant="secondary"
+                  >
+                    <FilePlus2 className="h-3.5 w-3.5" />
+                    Run Workbook Enrichment
+                  </Button>
+                ) : undefined
+              }
+            />
+
+            <PhaseCard
+              title="Historical Insights"
+              description="Historical insights unlock only after enough completed RFQs and retained workbooks exist. For now, the platform is still building that learning base."
+              badge={<Badge variant="steel">Maturity Gated</Badge>}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {permissions.canReprocessArtifacts ? (
+        <div className="surface-panel p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Support Actions
+              </h3>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                These manual support actions remain available as secondary controls while lifecycle automation is still being completed.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={busyAction === "trigger-intake"}
-                onClick={() =>
-                  void runAction("trigger-intake", onTriggerIntake, formatTriggerMessage)
-                }
-                size="sm"
-                variant="secondary"
-              >
-                <WandSparkles className="h-3.5 w-3.5" />
-                Trigger Intake
-              </Button>
-              <Button
-                disabled={busyAction === "trigger-workbook"}
-                onClick={() =>
-                  void runAction("trigger-workbook", onTriggerWorkbook, formatTriggerMessage)
-                }
-                size="sm"
-                variant="secondary"
-              >
-                <FilePlus2 className="h-3.5 w-3.5" />
-                Trigger Workbook
-              </Button>
               <Button
                 disabled={!terminalOutcome || busyAction === "trigger-outcome"}
                 onClick={() =>
@@ -155,29 +276,8 @@ export function IntelligenceActionsPanel({
                 variant="secondary"
               >
                 <ArrowRight className="h-3.5 w-3.5" />
-                Trigger Outcome
+                Refresh Outcome Enrichment
               </Button>
-              <Button onClick={onRefresh} size="sm" variant="ghost">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {permissions.canReprocessArtifacts ? (
-        <div className="surface-panel p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                Reprocess Actions
-              </h3>
-              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                Confirmed reprocess routes remain available here. The richer orchestration actions are above.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
               <Button
                 disabled={busyAction === "reprocess:intake"}
                 onClick={() =>
@@ -187,7 +287,7 @@ export function IntelligenceActionsPanel({
                 variant="secondary"
               >
                 <RotateCw className="h-3.5 w-3.5" />
-                Reprocess Intake
+                Reprocess Package
               </Button>
               <Button
                 disabled={busyAction === "reprocess:workbook"}
@@ -200,7 +300,7 @@ export function IntelligenceActionsPanel({
                 <RotateCw className="h-3.5 w-3.5" />
                 Reprocess Workbook
               </Button>
-              <Badge variant="steel">Status: {rfqStatus.replaceAll("_", " ")}</Badge>
+              <Badge variant="steel">Status: {getRfqStatusLabel(rfqStatus)}</Badge>
             </div>
           </div>
         </div>
